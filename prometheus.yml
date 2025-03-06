@@ -1,0 +1,89 @@
+# 📊 Prometheus Configuration for V2Ray Management System
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+# 🚨 Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# 📝 Rule files
+rule_files:
+  # - "alert_rules.yml"
+
+# 🎯 Scrape configurations
+scrape_configs:
+  # 🤖 Bot and API Service monitoring
+  - job_name: 'v2ray-services'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['api:8000']
+        labels:
+          service: 'api'
+      - targets: ['bot:8000']
+        labels:
+          service: 'bot'
+
+  # 🔄 Celery monitoring via Flower
+  - job_name: 'celery'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['flower:5555']
+        labels:
+          service: 'celery'
+
+  # 📦 Redis monitoring
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+        labels:
+          service: 'redis'
+
+  # 🗄️ PostgreSQL monitoring
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['db:5432']
+        labels:
+          service: 'database'
+
+  # 🔍 Node Exporter for host metrics
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'host'
+
+  # 📡 3x-ui Panel monitoring
+  - job_name: 'xui-panel'
+    metrics_path: '/metrics'
+    scheme: 'https'
+    static_configs:
+      - targets: ['${XUI_PANEL_URL}']
+        labels:
+          service: 'xui-panel'
+
+  # 🚀 Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'monitoring'
+
+# ⚙️ Remote write configuration (optional)
+# remote_write:
+#   - url: "https://remote-storage/api/v1/write"
+#     basic_auth:
+#       username: "username"
+#       password: "password"
+
+# 🔒 Remote read configuration (optional)
+# remote_read:
+#   - url: "https://remote-storage/api/v1/read"
+#     basic_auth:
+#       username: "username"
+#       password: "password"

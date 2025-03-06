@@ -1,0 +1,79 @@
+# 🐍 Use Python 3.9 slim image
+FROM python:3.9-slim
+
+# 🏷️ Labels
+LABEL maintainer="Your Name <your.email@example.com>"
+LABEL version="7.0"
+LABEL description="V2Ray Account Management Backend API"
+
+# 🌍 Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# 📦 Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 📂 Create and set working directory
+WORKDIR /app
+
+# 📋 Copy requirements first for better caching
+COPY requirements.txt .
+
+# 📥 Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 📁 Copy project files
+COPY backend /app/backend
+COPY .env /app/.env
+
+# 🔄 Copy Alembic configuration and migrations
+COPY backend/alembic.ini .
+COPY backend/migrations /app/migrations
+
+# 📝 Create startup script
+RUN echo '#!/bin/bash\n\
+# Wait for database\n\
+echo "Waiting for PostgreSQL..."\n\
+while ! nc -z $POSTGRES_SERVER 5432; do\n\
+  sleep 1\n\
+done\n\
+echo "PostgreSQL started"\n\
+\n\
+# Wait for Redis\n\
+echo "Waiting for Redis..."\n\
+while ! nc -z redis 6379; do\n\
+  sleep 1\n\
+done\n\
+echo "Redis started"\n\
+\n\
+# Run migrations\n\
+echo "Running database migrations..."\n\
+alembic upgrade head\n\
+\n\
+# Start API server\n\
+echo "Starting FastAPI server..."\n\
+uvicorn backend.app.main:app --host 0.0.0.0 --port 8000\n\
+' > /app/start.sh
+
+# Make startup script executable
+RUN chmod +x /app/start.sh
+
+# 👤 Create non-root user
+RUN useradd -m apiuser && chown -R apiuser:apiuser /app
+USER apiuser
+
+# 🚀 Command to run the API
+CMD ["/app/start.sh"]
+
+# 🔍 Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/api/v1/health || exit 1
+
+# 📡 Expose port
+EXPOSE 8000

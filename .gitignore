@@ -1,0 +1,143 @@
+# 🐍 Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 🔒 Environment variables
+.env
+.env.*
+!.env.example
+
+# 📝 Logs
+*.log
+logs/
+log/
+
+# 🗄️ Database
+*.sqlite3
+*.db
+
+# 🧪 Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# 📦 Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 💻 IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 🖼️ Media and uploads
+media/
+uploads/
+receipts/
+static/
+
+# 🔄 Celery
+celerybeat-schedule
+celerybeat.pid
+
+# 📊 Monitoring
+prometheus_data/
+grafana_data/
+
+# 🐳 Docker
+.docker/
+docker-compose.override.yml
+
+# 🗃️ Local development
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# 🔐 SSL/TLS certificates
+*.pem
+*.key
+*.crt
+*.cer
+*.der
+*.priv
+
+# 📱 V2Ray specific
+config.json
+xui_config/
+v2ray_config/
+
+# 🔄 Temporary files
+*.tmp
+*.temp
+.temp/
+tmp/
+
+# 📦 Node modules (if any frontend components)
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# 📊 Generated files
+*.generated.*
+generated/
+
+# 🔒 Security
+*.pem
+*.key
+*.cert
+*.password
+*.secret
+
+# 💾 Backup files
+*.bak
+*.backup
+*~
+*.swp
+*.swo
+
+# 📱 System files
+.DS_Store
+Thumbs.db
+desktop.ini
