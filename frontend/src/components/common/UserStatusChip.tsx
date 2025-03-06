@@ -1,4 +1,6 @@
-import { Chip, ChipProps } from '@mui/material';
+import React from 'react';
+import { Chip as MuiChip } from '@mui/material';
+import type { ChipProps } from '@mui/material';
 import { useTranslations } from 'next-intl';
 
 interface UserStatusChipProps extends Omit<ChipProps, 'label' | 'color'> {
@@ -15,7 +17,7 @@ export default function UserStatusChip({ status, ...props }: UserStatusChipProps
   const t = useTranslations();
 
   return (
-    <Chip
+    <MuiChip
       label={t(`users.status.${status.toLowerCase()}`)}
       color={statusColors[status]}
       {...props}
@@ -39,7 +41,7 @@ export function UserRoleChip({ role, ...props }: UserRoleChipProps) {
   const t = useTranslations();
 
   return (
-    <Chip
+    <MuiChip
       label={t(`users.roles.${role.toLowerCase()}`)}
       color={roleColors[role]}
       {...props}
