@@ -69,6 +69,10 @@ sed -i "s/admin_secure_password/$GRAFANA_PASSWORD/g" .env
 # Update database URL with new password
 sed -i "s|postgresql://v2ray_user:v2ray_secure_password@|postgresql://v2ray_user:$POSTGRES_PASSWORD@|g" .env
 
+# Install frontend dependencies
+echo -e "${YELLOW}Installing frontend dependencies...${NC}"
+cd frontend && npm install && cd ..
+
 # Pull and build Docker images
 echo -e "${YELLOW}Building Docker containers...${NC}"
 docker-compose build
