@@ -1,9 +1,10 @@
-from typing import Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlmodel import Session, select
-from datetime import datetime
+from typing import Any, List, Optional, Dict
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
+from sqlmodel import Session, select, func
+from datetime import datetime, timedelta
 
 from ...db.session import get_session
+from ...services.activity_logger import ActivityLogger
 from ...db.models.user import (
     User,
     UserUpdate,
@@ -53,38 +54,82 @@ async def list_users(
     users = db.exec(query.offset(skip).limit(limit)).all()
     return users
 
-@router.get("/stats")
-async def get_user_stats(
+@router.get("/analytics")
+async def get_user_analytics(
     *,
     db: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_staff)
-) -> Any:
+    current_user: User = Depends(get_current_active_staff),
+    days: Optional[int] = Query(30, ge=1, le=365)
+) -> Dict[str, Any]:
     """
-    Get user statistics.
+    Get detailed user analytics.
     Only accessible by admin and support staff.
     """
-    total_users = db.exec(select(User)).count()
-    active_users = db.exec(
-        select(User).where(User.status == UserStatus.ACTIVE)
-    ).count()
-    vip_users = db.exec(
-        select(User).where(User.role == UserRole.VIP)
-    ).count()
+    now = datetime.utcnow()
+    period_start = now - timedelta(days=days)
     
-    # Get users registered in last 30 days
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    new_users = db.exec(
-        select(User).where(User.created_at >= thirty_days_ago)
-    ).count()
+    # Basic stats
+    total_users = db.exec(select(User)).count()
+    active_users = db.exec(select(User).where(User.status == UserStatus.ACTIVE)).count()
+    vip_users = db.exec(select(User).where(User.role == UserRole.VIP)).count()
+    new_users = db.exec(select(User).where(User.created_at >= period_start)).count()
+    
+    # User growth over time
+    growth_query = select(
+        func.date_trunc('day', User.created_at).label('date'),
+        func.count(User.id).label('count')
+    ).where(
+        User.created_at >= period_start
+    ).group_by(
+        func.date_trunc('day', User.created_at)
+    ).order_by(
+        func.date_trunc('day', User.created_at)
+    )
+    
+    growth_data = db.exec(growth_query).all()
+    daily_growth = [{"date": row.date, "new_users": row.count} for row in growth_data]
+    
+    # Status distribution
+    status_query = select(
+        User.status,
+        func.count(User.id).label('count')
+    ).group_by(User.status)
+    
+    status_data = db.exec(status_query).all()
+    status_distribution = {str(row.status): row.count for row in status_data}
+    
+    # Role distribution
+    role_query = select(
+        User.role,
+        func.count(User.id).label('count')
+    ).group_by(User.role)
+    
+    role_data = db.exec(role_query).all()
+    role_distribution = {str(row.role): row.count for row in role_data}
+    
+    # Get activity stats
+    activity_stats = await ActivityLogger.get_activity_stats()
     
     return {
-        "total_users": total_users,
-        "active_users": active_users,
-        "vip_users": vip_users,
-        "new_users_last_30_days": new_users
+        "overview": {
+            "total_users": total_users,
+            "active_users": active_users,
+            "vip_users": vip_users,
+            "new_users": new_users,
+            "period_days": days
+        },
+        "growth": {
+            "daily_growth": daily_growth,
+            "average_daily_growth": new_users / days if days > 0 else 0
+        },
+        "distribution": {
+            "by_status": status_distribution,
+            "by_role": role_distribution
+        },
+        "activity": activity_stats
     }
 
-@router.get("/{user_id}", response_model=UserWithSubscriptions)
+@router.get("/{user_id}", response_model=UserWithSubscriptions, response_model_exclude_none=True)
 async def get_user(
     *,
     db: Session = Depends(get_session),
@@ -107,6 +152,13 @@ async def get_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
+    
+    # Log activity
+    await ActivityLogger.log_activity(
+        activity_type="user_profile_view",
+        user_id=current_user.id,
+        details={"viewed_user_id": user_id}
+    )
     return user
 
 @router.put("/{user_id}", response_model=UserRead)
@@ -149,6 +201,16 @@ async def update_user(
     db.add(user)
     db.commit()
     db.refresh(user)
+    
+    # Log activity
+    await ActivityLogger.log_activity(
+        activity_type="user_updated",
+        user_id=current_user.id,
+        details={
+            "target_user_id": user_id,
+            "updated_fields": list(user_data.keys())
+        }
+    )
     return user
 
 @router.delete("/{user_id}")
@@ -176,6 +238,12 @@ async def delete_user(
     db.add(user)
     db.commit()
     
+    # Log activity
+    await ActivityLogger.log_activity(
+        activity_type="user_deleted",
+        user_id=current_user.id,
+        details={"deleted_user_id": user_id}
+    )
     return {"msg": "User successfully deleted"}
 
 @router.post("/{user_id}/change-role")
@@ -197,10 +265,22 @@ async def change_user_role(
             detail="User not found"
         )
     
+    old_role = user.role
     user.role = new_role
     db.add(user)
     db.commit()
     db.refresh(user)
+    
+    # Log activity
+    await ActivityLogger.log_activity(
+        activity_type="user_role_changed",
+        user_id=current_user.id,
+        details={
+            "target_user_id": user_id,
+            "old_role": str(old_role),
+            "new_role": str(new_role)
+        }
+    )
     return user
 
 @router.post("/{user_id}/change-status")
@@ -222,6 +302,7 @@ async def change_user_status(
             detail="User not found"
         )
     
+    old_status = user.status
     user.status = new_status
     if new_status == UserStatus.BLOCKED:
         user.is_active = False
@@ -231,6 +312,17 @@ async def change_user_status(
     db.add(user)
     db.commit()
     db.refresh(user)
+    
+    # Log activity
+    await ActivityLogger.log_activity(
+        activity_type="user_status_changed",
+        user_id=current_user.id,
+        details={
+            "target_user_id": user_id,
+            "old_status": str(old_status),
+            "new_status": str(new_status)
+        }
+    )
     return user
 
 @router.post("/{user_id}/change-password")
@@ -263,9 +355,13 @@ async def change_password(
     db.add(user)
     db.commit()
     
+    # Log activity
+    await ActivityLogger.log_activity(
+        activity_type="password_changed",
+        user_id=current_user.id,
+        details={"target_user_id": user_id}
+    )
     return {"msg": "Password updated successfully"}
-
-from datetime import timedelta
 
 @router.get("/search/")
 async def search_users(
@@ -290,4 +386,10 @@ async def search_users(
         .limit(limit)
     ).all()
     
+    # Log activity
+    await ActivityLogger.log_activity(
+        activity_type="user_search",
+        user_id=current_user.id,
+        details={"query": query}
+    )
     return users

@@ -1,11 +1,18 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+import logging
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from .middleware.rate_limit import rate_limiter
-from .api.endpoints import auth, users, subscriptions, payments, discounts, tickets, servers, admin
+from .api.endpoints import (
+    auth, users, subscriptions, payments, discounts, 
+    tickets, servers, admin, admin_backup
+)
+from .services.backup import backup_service
 from .core.config import settings
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="V2Ray Management System",
@@ -67,6 +74,7 @@ app.include_router(discounts.router, prefix="/api/v1", tags=["Discounts"])
 app.include_router(tickets.router, prefix="/api/v1", tags=["Support Tickets"])
 app.include_router(servers.router, prefix="/api/v1", tags=["Servers"])
 app.include_router(admin.router, prefix="/api/v1", tags=["Administration"])
+app.include_router(admin_backup.router, prefix="/api/v1/admin", tags=["System Backup"])
 
 # Exception handlers
 @app.exception_handler(HTTPException)
@@ -96,9 +104,23 @@ async def general_exception_handler(request: Request, exc: Exception):
 async def startup_event():
     # Initialize rate limiter cleanup task
     await rate_limiter.start_cleanup()
+    
+    # Create initial backup directory
+    backup_service.backup_dir.mkdir(parents=True, exist_ok=True)
 
 # Shutdown event
 @app.on_event("shutdown")
 async def shutdown_event():
-    # Cleanup tasks can be added here
-    pass
+    # Cleanup tasks
+    try:
+        # Clean up old backups based on retention policy
+        backups = await backup_service.list_backups()
+        retention_days = settings.BACKUP_RETENTION_DAYS
+        cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
+        
+        for backup in backups:
+            backup_date = datetime.strptime(backup["timestamp"], "%Y%m%d_%H%M%S")
+            if backup_date < cutoff_date:
+                await backup_service.delete_backup(backup["path"])
+    except Exception as e:
+        logger.error(f"Error during shutdown cleanup: {str(e)}")

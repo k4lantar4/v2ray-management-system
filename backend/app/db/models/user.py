@@ -3,6 +3,8 @@ from sqlmodel import Field, SQLModel, Relationship
 from datetime import datetime
 from enum import Enum
 from .base import BaseModel
+from .backup import BackupMetadata
+from .activity_log import ActivityLog
 
 class UserRole(str, Enum):
     ADMIN = "admin"
@@ -33,6 +35,14 @@ class User(BaseModel, UserBase, table=True):
     subscriptions: List["Subscription"] = Relationship(back_populates="user")
     payments: List["Payment"] = Relationship(back_populates="user")
     tickets: List["Ticket"] = Relationship(back_populates="user")
+    activities: List["ActivityLog"] = Relationship(back_populates="user")
+    created_backups: List["BackupMetadata"] = Relationship(
+        back_populates="creator",
+        sa_relationship_kwargs={
+            "lazy": "selectin",
+            "cascade": "all, delete-orphan"
+        }
+    )
 
     class Config:
         arbitrary_types_allowed = True
@@ -55,6 +65,9 @@ class UserRead(UserBase):
     id: int
     created_at: datetime
     last_login: Optional[datetime]
+    backup_count: Optional[int] = None
+    last_backup: Optional[datetime] = None
+    total_activities: Optional[int] = None
 
     class Config:
         orm_mode = True
@@ -62,6 +75,8 @@ class UserRead(UserBase):
 class UserWithSubscriptions(UserRead):
     """Schema for user data with subscriptions"""
     subscriptions: List["SubscriptionRead"] = []
+    recent_activities: List["ActivityLog"] = []
+    recent_backups: List["BackupMetadata"] = []
 
     class Config:
         orm_mode = True

@@ -78,9 +78,32 @@ class Settings(BaseSettings):
     CACHE_TTL: int = 300  # 5 minutes
     ENABLE_RESPONSE_CACHE: bool = True
     
+    # Backup Settings
+    BACKUP_DIR: str = "backups"
+    BACKUP_RETENTION_DAYS: int = 30
+    BACKUP_COMPRESSION_LEVEL: int = 9  # Maximum compression
+    BACKUP_SCHEDULE_ENABLED: bool = True
+    BACKUP_SCHEDULE_CRON: str = "0 0 * * *"  # Daily at midnight
+    MAX_BACKUP_SIZE: int = 1_073_741_824  # 1GB
+    BACKUP_ENCRYPTION_KEY: Optional[str] = None
+    
     class Config:
         case_sensitive = True
         env_file = ".env"
+        
+    @validator("BACKUP_ENCRYPTION_KEY")
+    def validate_backup_key(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            try:
+                # Ensure key is valid for Fernet
+                if not v:
+                    return None
+                key = base64.b64decode(v)
+                if len(key) != 32:
+                    raise ValueError("Invalid key length")
+            except Exception:
+                raise ValueError("Invalid encryption key format")
+        return v
 
 # Create settings instance
 settings = Settings()
@@ -89,3 +112,8 @@ settings = Settings()
 CORS_ORIGINS = settings.ALLOWED_ORIGINS
 ACCESS_TOKEN_EXPIRE = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 REFRESH_TOKEN_EXPIRE = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+
+# Ensure backup directory is absolute
+from pathlib import Path
+if not Path(settings.BACKUP_DIR).is_absolute():
+    settings.BACKUP_DIR = str(Path.cwd() / settings.BACKUP_DIR)
