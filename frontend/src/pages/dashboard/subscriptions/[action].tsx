@@ -254,7 +254,12 @@ export default function SubscriptionForm() {
                   <Select
                     name="status"
                     value={formData.status}
-                    onChange={handleChange}
+                    onChange={(e: SelectChangeEvent<string>) => {
+                      setFormData((prev: SubscriptionFormData) => ({
+                        ...prev,
+                        status: e.target.value,
+                      }));
+                    }}
                     label={t('subscriptions.fields.status')}
                   >
                     <MenuItem value="ACTIVE">{t('subscriptions.status.active')}</MenuItem>
