@@ -29,7 +29,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 📁 Copy project files
 COPY backend /app/backend
-COPY .env /app/.env
 
 # 🔐 Create directory for receipt images
 RUN mkdir -p /app/receipts && chmod 755 /app/receipts
