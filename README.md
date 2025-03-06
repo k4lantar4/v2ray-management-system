@@ -2,121 +2,155 @@
 
 A comprehensive management system for V2Ray with a modern web interface, Telegram bot integration, and advanced monitoring capabilities.
 
+## Features
+
+- Modern web interface built with Next.js
+- FastAPI backend with PostgreSQL database
+- Telegram bot integration
+- Automated SSL certificate management
+- Docker-based deployment
+- Prometheus metrics integration
+- Automated backups
+- Multi-user support
+- Subscription management
+- Ticket system
+
 ## System Requirements
 
-- Docker (20.10.0 or higher)
-- Docker Compose (2.0.0 or higher)
-- Git
+- Linux-based OS (Ubuntu, Debian, or CentOS recommended)
 - 2GB RAM minimum (4GB recommended)
 - 20GB free disk space
+- Domain name pointed to your server
+- Open ports: 80, 443 (for SSL), and your V2Ray ports
 
 ## Quick Installation
 
-1. Clone the repository:
+The system comes with an automated installer that handles everything including:
+
+- Docker and Docker Compose installation
+- SSL certificate setup with Let's Encrypt
+- Database initialization
+- Telegram bot webhook configuration
+- Environment configuration
+- Service deployment
+
+### One-Command Installation
+
 ```bash
-git clone https://github.com/k4lantar4/v2ray-management-system.git
-cd v2ray-management-system
+wget -O install.sh https://raw.githubusercontent.com/yourusername/v2ray-management-system/main/install.sh && chmod +x install.sh && ./install.sh
 ```
 
-2. Run the interactive installer:
+Or if you've already cloned the repository:
+
 ```bash
-./install.sh
+chmod +x install.sh && ./install.sh
 ```
 
 The installer will guide you through:
-- System requirements check
-- Environment configuration
-- Database setup
-- Admin user creation
-- Service deployment
 
-## What the Installer Does
+1. System requirements check and software installation
+2. Domain and SSL setup
+3. Database configuration
+4. Redis setup
+5. Telegram bot configuration
+6. Admin user creation
 
-1. **System Check**
-   - Verifies required software (Docker, Docker Compose, Git)
-   - Checks system resources
+## What Gets Installed
 
-2. **Configuration**
-   - Creates secure environment variables
-   - Configures database settings
-   - Sets up Redis connection
-   - Configures Telegram bot integration
-   - Sets up backup parameters
+### System Software
+- Docker
+- Docker Compose
+- Certbot (for SSL)
+- Git
 
-3. **Database Initialization**
-   - Creates database schema
-   - Runs migrations
-   - Creates admin user
-
-4. **Service Deployment**
-   - Builds Docker images
-   - Starts all services
-   - Verifies system health
+### Main Components
+- Frontend (Next.js)
+- Backend (FastAPI)
+- PostgreSQL Database
+- Redis Cache
+- Telegram Bot
+- Prometheus Metrics
+- Nginx Proxy
 
 ## Post-Installation
 
-After successful installation, you can access:
+After installation completes, you can access:
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000/api/docs
-- Admin Panel: http://localhost:3000/admin
+- Frontend: https://your-domain.com
+- Backend API: https://your-domain.com/api/docs
+- Admin Panel: https://your-domain.com/admin
 
-## Security Recommendations
+## Security Features
 
-1. **Change Default Passwords**
-   - Change the admin password after first login
-   - Secure your database password
-   - Update Redis password if needed
+- Automatic SSL certificate management
+- Secure cookie handling
+- Rate limiting
+- Two-factor authentication
+- API key management
+- Automated backups
+- Activity logging
 
-2. **Configure Firewall**
-   - Allow only necessary ports
-   - Set up rate limiting
-   - Configure SSL/TLS
+## Environment Configuration
 
-3. **Regular Backups**
-   - Enable automated backups
-   - Test backup restoration
-   - Store backups securely
+The installer will help you configure:
 
-## Components
+- Database credentials
+- Redis password
+- Telegram bot token
+- SSL certificates
+- Security keys
+- Backup settings
 
-- **Frontend**: Next.js with TypeScript
-- **Backend**: FastAPI with PostgreSQL
-- **Cache**: Redis
-- **Bot**: Telegram Bot Integration
-- **Monitoring**: Prometheus & Server Metrics
-- **Backup System**: Automated backup and restore
+## Automatic Updates
 
-## Environment Variables
+SSL certificates will automatically renew before expiration.
 
-Key environment variables that will be configured during installation:
+## Backup System
 
-- `DATABASE_URL`: PostgreSQL connection string
-- `REDIS_HOST`: Redis server host
-- `TELEGRAM_BOT_TOKEN`: Telegram bot API token
-- `SECRET_KEY`: Application secret key
-- `BACKUP_ENCRYPTION_KEY`: Backup encryption key
+The system includes:
 
-For a complete list of environment variables, see `.env.example`.
+- Automated daily backups
+- Configurable retention period
+- Encrypted backup storage
+- One-click restore capability
+
+## Monitoring
+
+- Prometheus metrics integration
+- Server resource monitoring
+- User activity tracking
+- Error logging
 
 ## Troubleshooting
 
-If you encounter issues during installation:
+### Common Issues
 
-1. **Database Connection Issues**
-   - Check PostgreSQL container logs
-   - Verify database credentials
-   - Ensure PostgreSQL is running
+1. **Installation Fails**
+   - Check system requirements
+   - Ensure ports 80 and 443 are available
+   - Verify domain DNS settings
 
-2. **Redis Connection Issues**
-   - Verify Redis container status
-   - Check Redis password
-   - Ensure Redis is running
+2. **SSL Certificate Issues**
+   - Ensure domain points to server
+   - Check DNS propagation
+   - Verify port 80 is available
 
-3. **Service Start Issues**
-   - Check Docker logs
-   - Verify port availability
-   - Check system resources
+3. **Database Connection Issues**
+   - Check PostgreSQL logs
+   - Verify credentials
+   - Ensure ports are open
+
+4. **Telegram Bot Issues**
+   - Verify bot token
+   - Check webhook setup
+   - Ensure SSL is working
+
+### Logs
+
+Important log locations:
+- Application logs: `docker-compose logs`
+- SSL logs: `/var/log/letsencrypt/`
+- Nginx logs: Check Docker container logs
 
 ## Support
 
@@ -124,6 +158,31 @@ For issues and support:
 - Create an issue in the GitHub repository
 - Check the documentation
 - Contact the development team
+
+## Security Recommendations
+
+1. **Firewall Setup**
+   ```bash
+   # Allow only necessary ports
+   sudo ufw allow 80/tcp
+   sudo ufw allow 443/tcp
+   sudo ufw allow your-v2ray-port/tcp
+   ```
+
+2. **Regular Updates**
+   ```bash
+   # Update system packages
+   sudo apt update && sudo apt upgrade
+   
+   # Update Docker images
+   docker-compose pull
+   docker-compose up -d
+   ```
+
+3. **Backup Management**
+   - Regularly verify backup integrity
+   - Store backups off-site
+   - Test restoration process
 
 ## License
 

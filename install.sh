@@ -24,6 +24,227 @@ print_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
+# Function to detect OS
+detect_os() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS=$NAME
+        VER=$VERSION_ID
+    else
+        print_error "Cannot detect OS"
+        exit 1
+    fi
+}
+
+# Function to install Docker
+install_docker() {
+    print_message "Installing Docker..."
+    
+    if command_exists docker; then
+        print_success "Docker is already installed"
+        return
+    fi
+    
+    detect_os
+    
+    case $OS in
+        "Ubuntu")
+            # Remove old versions
+            sudo apt-get remove -y docker docker-engine docker.io containerd runc || true
+            
+            # Install prerequisites
+            sudo apt-get update
+            sudo apt-get install -y \
+                apt-transport-https \
+                ca-certificates \
+                curl \
+                gnupg \
+                lsb-release
+            
+            # Add Docker's official GPG key
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+            
+            # Set up stable repository
+            echo \
+                "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+                $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+            
+            # Install Docker Engine
+            sudo apt-get update
+            sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+            
+            # Start Docker service
+            sudo systemctl start docker
+            sudo systemctl enable docker
+            
+            # Add current user to docker group
+            sudo usermod -aG docker $USER
+            ;;
+            
+        "Debian GNU/Linux")
+            # Remove old versions
+            sudo apt-get remove -y docker docker-engine docker.io containerd runc || true
+            
+            # Install prerequisites
+            sudo apt-get update
+            sudo apt-get install -y \
+                apt-transport-https \
+                ca-certificates \
+                curl \
+                gnupg \
+                lsb-release
+            
+            # Add Docker's official GPG key
+            curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+            
+            # Set up stable repository
+            echo \
+                "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \
+                $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+            
+            # Install Docker Engine
+            sudo apt-get update
+            sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+            
+            # Start Docker service
+            sudo systemctl start docker
+            sudo systemctl enable docker
+            
+            # Add current user to docker group
+            sudo usermod -aG docker $USER
+            ;;
+            
+        "CentOS Linux")
+            # Remove old versions
+            sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
+            
+            # Install prerequisites
+            sudo yum install -y yum-utils
+            
+            # Add Docker repository
+            sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+            
+            # Install Docker Engine
+            sudo yum install -y docker-ce docker-ce-cli containerd.io
+            
+            # Start Docker service
+            sudo systemctl start docker
+            sudo systemctl enable docker
+            
+            # Add current user to docker group
+            sudo usermod -aG docker $USER
+            ;;
+            
+        *)
+            print_error "Unsupported OS: $OS"
+            exit 1
+            ;;
+    esac
+    
+    print_success "Docker installed successfully!"
+    print_warning "Please log out and log back in for group changes to take effect."
+}
+
+# Function to install Docker Compose
+install_docker_compose() {
+    print_message "Installing Docker Compose..."
+    
+    if command_exists docker-compose; then
+        print_success "Docker Compose is already installed"
+        return
+    fi
+    
+    # Download Docker Compose
+    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    
+    # Apply executable permissions
+    sudo chmod +x /usr/local/bin/docker-compose
+    
+    print_success "Docker Compose installed successfully!"
+}
+
+# Function to install Certbot and get SSL certificate
+setup_ssl() {
+    print_message "Setting up SSL with Certbot..."
+    
+    local domain=$(get_input "Enter your domain name (e.g., example.com)")
+    local email=$(get_input "Enter your email address for SSL notifications")
+    
+    detect_os
+    
+    # Install Certbot
+    case $OS in
+        "Ubuntu"|"Debian GNU/Linux")
+            sudo apt-get update
+            sudo apt-get install -y certbot
+            ;;
+        "CentOS Linux")
+            sudo yum install -y certbot
+            ;;
+        *)
+            print_error "Unsupported OS for Certbot installation: $OS"
+            return 1
+            ;;
+    esac
+    
+    # Stop any running web server
+    docker-compose down || true
+    
+    # Get SSL certificate
+    sudo certbot certonly --standalone -d $domain --email $email --agree-tos --no-eff-email
+    
+    # Create SSL directory if it doesn't exist
+    sudo mkdir -p ./ssl
+    
+    # Copy certificates
+    sudo cp /etc/letsencrypt/live/$domain/fullchain.pem ./ssl/
+    sudo cp /etc/letsencrypt/live/$domain/privkey.pem ./ssl/
+    
+    # Set proper permissions
+    sudo chown -R $USER:$USER ./ssl
+    sudo chmod -R 600 ./ssl
+    
+    # Update environment variables
+    sed -i "s#ALLOWED_ORIGINS=.*#ALLOWED_ORIGINS=\"https://$domain\"#g" .env
+    
+    print_success "SSL certificates obtained successfully!"
+    
+    # Setup auto-renewal
+    (crontab -l 2>/dev/null; echo "0 0 * * * certbot renew --quiet --deploy-hook 'docker-compose restart'") | crontab -
+    
+    print_success "SSL auto-renewal configured!"
+    
+    # Save domain for later use
+    echo "$domain" > .domain
+}
+
+# Function to setup Telegram bot webhook
+setup_telegram_webhook() {
+    print_message "Setting up Telegram bot webhook..."
+    
+    # Get domain from saved file
+    local domain=$(cat .domain)
+    local bot_token=$(grep TELEGRAM_BOT_TOKEN .env | cut -d '"' -f 2)
+    
+    if [ -z "$bot_token" ]; then
+        print_error "Telegram bot token not found in .env file"
+        return 1
+    fi
+    
+    # Set webhook URL
+    local webhook_url="https://$domain/api/bot/webhook"
+    
+    # Call Telegram API to set webhook
+    local response=$(curl -s -F "url=$webhook_url" "https://api.telegram.org/bot$bot_token/setWebhook")
+    
+    if echo "$response" | grep -q '"ok":true'; then
+        print_success "Telegram webhook configured successfully!"
+    else
+        print_error "Failed to set Telegram webhook. Response: $response"
+        return 1
+    fi
+}
+
 # Function to check if a command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
@@ -33,25 +254,32 @@ command_exists() {
 check_requirements() {
     print_message "Checking system requirements..."
     
-    local requirements=(
-        "docker:Docker is not installed. Please install Docker first: https://docs.docker.com/get-docker/"
-        "docker-compose:Docker Compose is not installed. Please install Docker Compose: https://docs.docker.com/compose/install/"
-        "git:Git is not installed. Please install Git: https://git-scm.com/downloads"
-    )
+    # Install Docker if not present
+    if ! command_exists docker; then
+        install_docker
+    fi
     
-    local all_requirements_met=true
+    # Install Docker Compose if not present
+    if ! command_exists docker-compose; then
+        install_docker_compose
+    fi
     
-    for req in "${requirements[@]}"; do
-        IFS=":" read -r cmd msg <<< "$req"
-        if ! command_exists "$cmd"; then
-            print_error "$msg"
-            all_requirements_met=false
-        fi
-    done
-    
-    if [ "$all_requirements_met" = false ]; then
-        print_error "Please install the missing requirements and run the installer again."
-        exit 1
+    # Install Git if not present
+    if ! command_exists git; then
+        detect_os
+        case $OS in
+            "Ubuntu"|"Debian GNU/Linux")
+                sudo apt-get update
+                sudo apt-get install -y git
+                ;;
+            "CentOS Linux")
+                sudo yum install -y git
+                ;;
+            *)
+                print_error "Please install Git manually: https://git-scm.com/downloads"
+                exit 1
+                ;;
+        esac
     fi
     
     print_success "All system requirements are met!"
@@ -252,11 +480,14 @@ init_database() {
 main() {
     print_message "Starting V2Ray Management System installation..."
     
-    # Check system requirements
+    # Check and install system requirements
     check_requirements
     
     # Create environment file
     create_env_file
+    
+    # Setup SSL certificates
+    setup_ssl
     
     # Setup Docker environment
     setup_docker
@@ -264,21 +495,30 @@ main() {
     # Initialize database
     init_database
     
+    # Setup Telegram webhook
+    setup_telegram_webhook
+    
     # Start the system
     print_message "Starting the system..."
     docker-compose up -d
     
+    # Get domain from saved file
+    local domain=$(cat .domain)
+    
     print_success "Installation completed successfully!"
     print_message "You can now access:"
-    echo -e "${GREEN}Frontend:${NC} http://localhost:3000"
-    echo -e "${GREEN}Backend API:${NC} http://localhost:8000/api/docs"
-    echo -e "${GREEN}Admin panel:${NC} http://localhost:3000/admin"
+    echo -e "${GREEN}Frontend:${NC} https://$domain"
+    echo -e "${GREEN}Backend API:${NC} https://$domain/api/docs"
+    echo -e "${GREEN}Admin panel:${NC} https://$domain/admin"
     
     print_warning "Please make sure to:"
     echo "1. Save your admin credentials"
     echo "2. Keep your .env file secure"
-    echo "3. Configure your firewall if needed"
-    echo "4. Set up SSL/TLS for production use"
+    echo "3. Backup your SSL certificates"
+    echo "4. Configure your firewall if needed"
+    
+    # Cleanup
+    rm -f .domain
 }
 
 # Run the installer
