@@ -10,6 +10,7 @@ import {
   FormControl,
   InputLabel,
   Select,
+  SelectChangeEvent,
   MenuItem,
   Typography,
   CircularProgress,
@@ -135,17 +136,17 @@ export default function SubscriptionForm() {
     }));
   };
 
-  const handleUserChange = (event: any, newValue: User | null) => {
+  const handleUserChange = (_event: React.SyntheticEvent, newValue: User | null) => {
     setSelectedUser(newValue);
     if (newValue) {
-      setFormData(prev => ({
+      setFormData((prev: SubscriptionFormData) => ({
         ...prev,
         user_id: newValue.id,
       }));
     }
   };
 
-  const handlePlanChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePlanChange = (e: SelectChangeEvent<string>) => {
     const plan = plans.find(p => p.id === e.target.value);
     if (plan) {
       setFormData(prev => ({
