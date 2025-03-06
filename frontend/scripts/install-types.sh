@@ -2,8 +2,8 @@
 
 # Install required type definitions
 npm install --save-dev \
-  @types/react \
-  @types/react-dom \
+  @types/react@18.2.0 \
+  @types/react-dom@18.2.0 \
   @types/node \
   @types/stylis \
   @types/stylis-plugin-rtl \

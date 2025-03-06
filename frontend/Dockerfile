@@ -3,25 +3,16 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files and scripts
 COPY package*.json ./
+COPY scripts ./scripts
 
-# Install ALL dependencies (including devDependencies)
-RUN npm install --production=false
+# Install dependencies and types
+RUN npm install --production=false && \
+    chmod +x ./scripts/install-types.sh && \
+    ./scripts/install-types.sh
 
-# Install type definitions
-RUN npm install --save-dev \
-    @types/react \
-    @types/react-dom \
-    @types/node \
-    @types/stylis \
-    @types/stylis-plugin-rtl \
-    @types/next \
-    @mui/types \
-    @types/next-intl \
-    @types/notistack
-
-# Copy project files
+# Copy remaining project files
 COPY . .
 
 # Create types directory
