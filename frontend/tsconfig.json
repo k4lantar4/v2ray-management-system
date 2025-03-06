@@ -17,14 +17,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    },
-    "types": [
-      "node",
-      "react",
-      "react-dom",
-      "next",
-      "next-intl"
-    ]
+    }
   },
   "include": [
     "next-env.d.ts",
