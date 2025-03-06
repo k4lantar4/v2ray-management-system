@@ -4,37 +4,25 @@
 npm install --save-dev \
   @types/react@18.2.0 \
   @types/react-dom@18.2.0 \
-  @types/node \
-  @types/stylis \
-  @types/stylis-plugin-rtl \
-  @types/next
-
-# Install MUI type definitions
-npm install --save-dev \
-  @mui/types \
-  @mui/material \
-  @mui/x-date-pickers
-
-# Install other necessary type definitions
-npm install --save-dev \
-  @types/next-intl \
-  @types/notistack
+  @types/node@18.0.0 \
+  @types/stylis@4.2.0 \
+  @types/next@9.0.0 \
+  @types/next-intl@2.0.0 \
+  @types/mui__material@5.14.0 \
+  @types/mui__icons-material@5.14.0
 
 # Create types directory if it doesn't exist
 mkdir -p src/types
 
-# Create environment.d.ts if it doesn't exist
-if [ ! -f src/types/environment.d.ts ]; then
-  echo "Creating environment.d.ts..."
-  cat > src/types/environment.d.ts << 'EOF'
+# Create next-env.d.ts if it doesn't exist
+if [ ! -f next-env.d.ts ]; then
+  echo "Creating next-env.d.ts..."
+  cat > next-env.d.ts << 'EOF'
 /// <reference types="next" />
-/// <reference types="react" />
-/// <reference types="@mui/material" />
-/// <reference types="@mui/x-date-pickers" />
-/// <reference types="next-intl" />
-/// <reference types="notistack" />
-/// <reference types="stylis" />
-/// <reference types="stylis-plugin-rtl" />
+/// <reference types="next/image-types/global" />
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/basic-features/typescript for more information.
 EOF
 fi
 

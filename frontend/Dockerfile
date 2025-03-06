@@ -15,8 +15,10 @@ RUN npm install --production=false && \
 # Copy remaining project files
 COPY . .
 
-# Create types directory
-RUN mkdir -p src/types
+# Create types directory and next-env.d.ts
+RUN mkdir -p src/types && \
+    echo '/// <reference types="next" />' > next-env.d.ts && \
+    echo '/// <reference types="next/image-types/global" />' >> next-env.d.ts
 
 # Build project
 RUN npm run build
@@ -31,6 +33,7 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/next-env.d.ts ./next-env.d.ts
 
 # Set environment variables
 ENV NODE_ENV production
