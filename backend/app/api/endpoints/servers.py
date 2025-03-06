@@ -216,6 +216,190 @@ async def update_server_status(
     db.refresh(server)
     return server
 
+@router.get("/{server_id}/panel-info", response_model=PanelInfo)
+async def get_panel_info(
+    *,
+    db: Session = Depends(get_session),
+    server_id: int,
+    current_user: User = Depends(get_current_active_staff)
+) -> Any:
+    """Get panel information for a server"""
+    server = db.get(Server, server_id)
+    if not server or server.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Server not found"
+        )
+    
+    try:
+        xui = XUIService(server)
+        return await xui.get_panel_info()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@router.get("/{server_id}/system-status", response_model=SystemStatus)
+async def get_system_status(
+    *,
+    db: Session = Depends(get_session),
+    server_id: int,
+    current_user: User = Depends(get_current_active_staff)
+) -> Any:
+    """Get detailed system status for a server"""
+    server = db.get(Server, server_id)
+    if not server or server.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Server not found"
+        )
+    
+    try:
+        xui = XUIService(server)
+        return await xui.get_system_status()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@router.get("/{server_id}/inbounds", response_model=List[InboundConfig])
+async def list_inbounds(
+    *,
+    db: Session = Depends(get_session),
+    server_id: int,
+    current_user: User = Depends(get_current_active_staff)
+) -> Any:
+    """List all inbound configurations for a server"""
+    server = db.get(Server, server_id)
+    if not server or server.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Server not found"
+        )
+    
+    try:
+        xui = XUIService(server)
+        return await xui.list_inbounds()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@router.get("/{server_id}/inbounds/{inbound_id}/traffic", response_model=TrafficStats)
+async def get_inbound_traffic(
+    *,
+    db: Session = Depends(get_session),
+    server_id: int,
+    inbound_id: int,
+    current_user: User = Depends(get_current_active_staff)
+) -> Any:
+    """Get traffic statistics for a specific inbound"""
+    server = db.get(Server, server_id)
+    if not server or server.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Server not found"
+        )
+    
+    try:
+        xui = XUIService(server)
+        return await xui.get_inbound_traffic(inbound_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@router.post("/{server_id}/backup")
+async def backup_server_config(
+    *,
+    db: Session = Depends(get_session),
+    server_id: int,
+    current_user: User = Depends(get_current_active_superuser)
+) -> Any:
+    """Backup server configuration. Only accessible by admin."""
+    server = db.get(Server, server_id)
+    if not server or server.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Server not found"
+        )
+    
+    try:
+        xui = XUIService(server)
+        backup_data = await xui.backup_config()
+        return {"backup_data": backup_data}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@router.post("/{server_id}/restore")
+async def restore_server_config(
+    *,
+    db: Session = Depends(get_session),
+    server_id: int,
+    backup_data: Dict,
+    current_user: User = Depends(get_current_active_superuser)
+) -> Any:
+    """Restore server configuration. Only accessible by admin."""
+    server = db.get(Server, server_id)
+    if not server or server.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Server not found"
+        )
+    
+    try:
+        xui = XUIService(server)
+        success = await xui.restore_config(backup_data)
+        if success:
+            return {"msg": "Server configuration restored successfully"}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to restore server configuration"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@router.put("/{server_id}/settings")
+async def update_panel_settings(
+    *,
+    db: Session = Depends(get_session),
+    server_id: int,
+    settings: PanelSettings,
+    current_user: User = Depends(get_current_active_superuser)
+) -> Any:
+    """Update panel settings. Only accessible by admin."""
+    server = db.get(Server, server_id)
+    if not server or server.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Server not found"
+        )
+    
+    try:
+        xui = XUIService(server)
+        success = await xui.update_panel_settings(settings)
+        if success:
+            return {"msg": "Panel settings updated successfully"}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update panel settings"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
 @router.post("/{server_id}/sync")
 async def sync_server_stats(
     *,
@@ -235,12 +419,16 @@ async def sync_server_stats(
         )
     
     try:
-        # TODO: Implement actual sync with 3x-ui panel
-        # This should update:
-        # - current_users
-        # - bandwidth_used
-        # - subscription data usage
-        return {"msg": "Server statistics synchronized successfully"}
+        xui = XUIService(server)
+        stats = await xui.get_server_stats(db=db)
+        panel_info = await xui.get_panel_info()
+        system_status = await xui.get_system_status()
+        
+        return {
+            "stats": stats,
+            "panel_info": panel_info,
+            "system_status": system_status
+        }
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

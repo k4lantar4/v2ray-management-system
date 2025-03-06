@@ -8,7 +8,7 @@ from sqlalchemy import and_
 from ..core.config import settings
 from ..db.session import get_db
 from ..db.models.subscription import Subscription, SubscriptionStatus
-from ..db.models.server import Server, ServerStatus
+from ..db.models.server import Server, ServerStatus, ServerSyncStatus
 from ..db.models.user import User, UserRole
 from ..services.xui_service import XUIService
 from ..services.notification import NotificationService
@@ -119,44 +119,69 @@ async def monitor_subscriptions():
 
 @celery_app.task(name='tasks.sync_servers')
 async def sync_servers():
-    """Synchronize server status and metrics"""
+    """Synchronize server status and metrics with enhanced monitoring"""
     try:
         async with get_db() as db:
             servers = await db.query(Server).all()
-            notification_service = NotificationService()
             
-            results = await XUIService.sync_all_servers(servers)
+            # Sync servers and record metrics
+            results = await XUIService.sync_all_servers(servers, db)
             
-            # Process results
-            for success in results["success"]:
-                server_id = success["server_id"]
-                stats = success["stats"]
-                status = success["status"]
+            # Analyze metrics for alerts
+            for server in servers:
+                try:
+                    # Get recent metrics
+                    metrics = await server.get_metrics_history(db, hours=1)
+                    if not metrics:
+                        continue
+                        
+                    # Calculate metrics trends
+                    avg_metrics = await server.get_average_metrics(db, hours=1)
+                    
+                    notification_service = NotificationService()
+                    alerts = []
+                    
+                    # Check for concerning trends
+                    if avg_metrics["avg_cpu"] > 85:
+                        alerts.append(f"Sustained high CPU usage: {avg_metrics['avg_cpu']:.1f}%")
+                    
+                    if avg_metrics["avg_memory"] > 85:
+                        alerts.append(f"Sustained high memory usage: {avg_metrics['avg_memory']:.1f}%")
+                    
+                    if avg_metrics["avg_response_time"] and avg_metrics["avg_response_time"] > 1000:
+                        alerts.append(f"High average response time: {avg_metrics['avg_response_time']:.0f}ms")
+                    
+                    # Check for failed login patterns
+                    if server.failed_login_attempts >= 5:
+                        alerts.append(f"Multiple failed login attempts: {server.failed_login_attempts}")
+                    
+                    # Send alerts if needed
+                    if alerts:
+                        await notification_service.send_system_alert(
+                            "server_performance_warning",
+                            {
+                                "server_id": server.id,
+                                "server_name": server.name,
+                                "alerts": alerts,
+                                "metrics": avg_metrics
+                            }
+                        )
                 
-                # Notify if server status changed
-                server = await db.query(Server).filter(Server.id == server_id).first()
-                if server and server.status != status:
-                    await notification_service.notify_server_status(
-                        server_id,
-                        status,
-                        stats
-                    )
-                    server.status = status
+                except Exception as e:
+                    logger.error(f"Error analyzing metrics for server {server.id}: {str(e)}")
+                    continue
             
-            # Handle failed servers
-            for failure in results["failed"]:
-                server_id = failure["server_id"]
-                error = failure["error"]
-                
-                await notification_service.send_system_alert(
-                    "server_sync_failed",
-                    {
-                        "server_id": server_id,
-                        "error": error
-                    }
+            # Log sync summary
+            success_count = len(results["success"])
+            failed_count = len(results["failed"])
+            logger.info(
+                f"Server sync completed: {success_count} succeeded, {failed_count} failed"
+            )
+            
+            if failed_count > 0:
+                logger.warning(
+                    f"Failed servers: {[f['server_id'] for f in results['failed']]}"
                 )
-            
-            await db.commit()
     
     except Exception as e:
         logger.error(f"Error in server sync task: {str(e)}")
@@ -172,7 +197,7 @@ async def check_server_health():
             for server in servers:
                 try:
                     xui = XUIService(server)
-                    stats = await xui.get_server_stats()
+                    stats = await xui.get_server_stats(db)  # Pass db to record metrics
                     
                     # Check critical metrics
                     alerts = []

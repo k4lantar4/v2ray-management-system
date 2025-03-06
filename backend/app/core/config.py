@@ -1,62 +1,91 @@
 from typing import List, Optional
-from pydantic import BaseSettings, PostgresDsn, validator
-import secrets
-from functools import lru_cache
+from pydantic import BaseSettings, AnyHttpUrl, validator
+from datetime import timedelta
 
 class Settings(BaseSettings):
-    # 🔐 تنظیمات امنیتی
-    SECRET_KEY: str = secrets.token_urlsafe(32)
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 روز
-    
-    # 🌐 تنظیمات API
-    API_V1_STR: str = "/api/v1"
+    # Base
     PROJECT_NAME: str = "V2Ray Management System"
+    API_V1_STR: str = "/api/v1"
+    VERSION: str = "7.0.0"
     
-    # 🤖 تنظیمات ربات تلگرام
-    TELEGRAM_BOT_TOKEN: str
-    ADMIN_GROUP_ID: int
-    PAYMENT_CHANNEL_ID: int
+    # Security
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
-    # 🗄️ تنظیمات دیتابیس
-    POSTGRES_SERVER: str
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
-    SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = None
-
-    @validator("SQLALCHEMY_DATABASE_URI", pre=True)
-    def assemble_db_connection(cls, v: Optional[str], values: dict) -> Any:
+    # Rate Limiting
+    RATE_LIMIT_PER_MINUTE: int = 60
+    
+    # CORS
+    ALLOWED_ORIGINS: List[str] = ["*"]
+    
+    @validator("ALLOWED_ORIGINS", pre=True)
+    def validate_allowed_origins(cls, v):
         if isinstance(v, str):
-            return v
-        return PostgresDsn.build(
-            scheme="postgresql",
-            user=values.get("POSTGRES_USER"),
-            password=values.get("POSTGRES_PASSWORD"),
-            host=values.get("POSTGRES_SERVER"),
-            path=f"/{values.get('POSTGRES_DB') or ''}",
-        )
+            return [i.strip() for i in v.split(",")]
+        return v
     
-    # 🔒 تنظیمات پنل 3x-ui
-    XUI_PANEL_URL: str
-    XUI_USERNAME: str
-    XUI_PASSWORD: str
+    # Redis Configuration
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: Optional[str] = None
     
-    # 💳 تنظیمات پرداخت
-    BANK_CARDS: List[str] = []  # لیست شماره کارت‌های بانکی
-    MIN_DEPOSIT_AMOUNT: int = 50000  # حداقل مبلغ شارژ کیف پول
-    MIN_SELLER_DEPOSIT: int = 500000  # حداقل شارژ برای فروشندگان
+    # Database
+    DATABASE_URL: str
+    MAX_CONNECTIONS_COUNT: int = 10
+    MIN_CONNECTIONS_COUNT: int = 5
     
-    # 🎁 تنظیمات تخفیف و پاداش
-    REFERRAL_BONUS_PERCENT: int = 10  # درصد پاداش معرف
-    VIP_DISCOUNT_PERCENT: int = 15  # درصد تخفیف کاربران VIP
+    # Telegram Bot
+    TELEGRAM_BOT_TOKEN: str
+    TELEGRAM_CHAT_ID: Optional[str] = None
+    
+    # Server Metrics
+    METRICS_RETENTION_DAYS: int = 30
+    ENABLE_PROMETHEUS: bool = True
+    
+    # API Documentation
+    DOCS_URL: Optional[str] = "/api/docs"
+    REDOC_URL: Optional[str] = "/api/redoc"
+    OPENAPI_URL: Optional[str] = "/api/openapi.json"
+    
+    # Security Headers
+    SECURITY_HEADERS: bool = True
+    HSTS_MAX_AGE: int = 31536000  # 1 year
+    
+    # Cookie Settings
+    COOKIE_SECURE: bool = True
+    COOKIE_HTTPONLY: bool = True
+    COOKIE_SAMESITE: str = "Lax"
+    
+    # 2FA Settings
+    ENABLE_2FA: bool = True
+    OTP_EXPIRY_SECONDS: int = 300  # 5 minutes
+    
+    # API Key Settings
+    API_KEY_EXPIRE_DAYS: int = 365
+    
+    # Logging
+    LOG_LEVEL: str = "INFO"
+    ENABLE_ACCESS_LOG: bool = True
+    
+    # File Upload
+    MAX_UPLOAD_SIZE: int = 5_242_880  # 5MB
+    ALLOWED_UPLOAD_EXTENSIONS: List[str] = [".jpg", ".jpeg", ".png", ".pdf"]
+    
+    # Cache Settings
+    CACHE_TTL: int = 300  # 5 minutes
+    ENABLE_RESPONSE_CACHE: bool = True
     
     class Config:
         case_sensitive = True
         env_file = ".env"
 
-# ⚙️ ایجاد تنظیمات به صورت Singleton
-@lru_cache()
-def get_settings():
-    return Settings()
+# Create settings instance
+settings = Settings()
 
-settings = get_settings()
+# Computed settings
+CORS_ORIGINS = settings.ALLOWED_ORIGINS
+ACCESS_TOKEN_EXPIRE = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+REFRESH_TOKEN_EXPIRE = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)

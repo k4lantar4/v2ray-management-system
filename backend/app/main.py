@@ -1,167 +1,104 @@
-from fastapi import FastAPI, Request, status
+from datetime import datetime
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-from sqlalchemy.exc import SQLAlchemyError
-import uvicorn
-import logging
-from datetime import datetime
-
+from starlette.middleware.base import BaseHTTPMiddleware
+from .middleware.rate_limit import rate_limiter
+from .api.endpoints import auth, users, subscriptions, payments, discounts, tickets, servers, admin
 from .core.config import settings
-from .db.session import init_db
-from .api.endpoints import (
-    auth,
-    users,
-    servers,
-    subscriptions,
-    payments,
-    discounts,
-    tickets,
-    admin
-)
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-# Initialize FastAPI app
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    title="V2Ray Management System",
+    description="API for V2Ray account management and monitoring",
+    version="7.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc"
 )
 
-# Configure CORS
+# Security Headers Middleware
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        # Add security headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        return response
+
+# CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
-# Custom exception handlers
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """Handle validation errors"""
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={
-            "detail": exc.errors(),
-            "body": exc.body
-        }
-    )
+# Add security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
 
-@app.exception_handler(SQLAlchemyError)
-async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
-    """Handle database errors"""
-    logger.error(f"Database error: {str(exc)}")
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "Internal server error"}
-    )
-
-# Request logging middleware
+# Add rate limiting middleware
 @app.middleware("http")
-async def log_requests(request: Request, call_next):
-    """Log all requests"""
-    start_time = datetime.utcnow()
-    response = await call_next(request)
-    end_time = datetime.utcnow()
-    
-    logger.info(
-        f"Path: {request.url.path} "
-        f"Method: {request.method} "
-        f"Status: {response.status_code} "
-        f"Duration: {(end_time - start_time).total_seconds():.3f}s"
-    )
-    return response
+async def rate_limit_middleware(request: Request, call_next):
+    await rate_limiter(request)
+    return await call_next(request)
 
-# Include routers
-app.include_router(
-    auth.router,
-    prefix=f"{settings.API_V1_STR}/auth",
-    tags=["authentication"]
-)
-app.include_router(
-    users.router,
-    prefix=f"{settings.API_V1_STR}/users",
-    tags=["users"]
-)
-app.include_router(
-    servers.router,
-    prefix=f"{settings.API_V1_STR}/servers",
-    tags=["servers"]
-)
-app.include_router(
-    subscriptions.router,
-    prefix=f"{settings.API_V1_STR}/subscriptions",
-    tags=["subscriptions"]
-)
-app.include_router(
-    payments.router,
-    prefix=f"{settings.API_V1_STR}/payments",
-    tags=["payments"]
-)
-app.include_router(
-    discounts.router,
-    prefix=f"{settings.API_V1_STR}/discounts",
-    tags=["discounts"]
-)
-app.include_router(
-    tickets.router,
-    prefix=f"{settings.API_V1_STR}/tickets",
-    tags=["tickets"]
-)
-app.include_router(
-    admin.router,
-    prefix=f"{settings.API_V1_STR}/admin",
-    tags=["admin"]
-)
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize application on startup"""
-    try:
-        # Initialize database
-        init_db()
-        logger.info("Database initialized successfully")
-        
-        # Additional startup tasks can be added here
-        # For example: Initialize Redis cache, setup background tasks, etc.
-        
-    except Exception as e:
-        logger.error(f"Error during startup: {str(e)}")
-        raise e
-
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "message": "VPN Subscription Management API",
-        "version": "1.0.0",
-        "docs_url": "/docs",
-        "redoc_url": "/redoc"
-    }
-
+# Health check endpoint
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
+        "version": "7.0.0"
     }
 
-if __name__ == "__main__":
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        workers=4
+# Include routers with versioned API paths
+app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
+app.include_router(users.router, prefix="/api/v1", tags=["Users"])
+app.include_router(subscriptions.router, prefix="/api/v1", tags=["Subscriptions"])
+app.include_router(payments.router, prefix="/api/v1", tags=["Payments"])
+app.include_router(discounts.router, prefix="/api/v1", tags=["Discounts"])
+app.include_router(tickets.router, prefix="/api/v1", tags=["Support Tickets"])
+app.include_router(servers.router, prefix="/api/v1", tags=["Servers"])
+app.include_router(admin.router, prefix="/api/v1", tags=["Administration"])
+
+# Exception handlers
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "detail": exc.detail,
+            "status_code": exc.status_code,
+            "timestamp": datetime.utcnow().isoformat()
+        }
     )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "status_code": 500,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    )
+
+# Startup event
+@app.on_event("startup")
+async def startup_event():
+    # Initialize rate limiter cleanup task
+    await rate_limiter.start_cleanup()
+
+# Shutdown event
+@app.on_event("shutdown")
+async def shutdown_event():
+    # Cleanup tasks can be added here
+    pass

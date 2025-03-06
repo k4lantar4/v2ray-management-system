@@ -1,199 +1,249 @@
-# 🚀 V2Ray Account Management Bot (Version 7.0)
+# V2Ray Management System
 
-A comprehensive Telegram bot for managing V2Ray accounts with automated subscription management, payment processing, and server monitoring.
+A comprehensive management system built with FastAPI, PostgreSQL, Redis, and Docker.
 
-## ✨ Features
+## 🚀 Quick Installation
 
-### 👥 User Management
-- Iranian phone number (+98) registration
-- VIP user system with special privileges
-- Multi-level user roles (Admin, Support, User, VIP)
-- Wallet system for payments
-
-### 💳 Subscription Management
-- Multiple subscription plans (30/90/180 days)
-- Auto-renewal system
-- Usage monitoring and notifications
-- Server switching capability
-
-### 💰 Payment System
-- Card-to-card payment support
-- Automated receipt verification
-- Wallet system with auto-recharge
-- Fraud detection system
-
-### 🖥️ Server Management
-- Integration with 3x-ui panel
-- Automatic load balancing
-- Server health monitoring
-- Performance metrics tracking
-
-### 🔔 Notifications
-- Subscription expiry alerts
-- Usage notifications
-- Payment confirmations
-- System status updates
-
-## 🛠️ Technical Stack
-
-- **Framework**: FastAPI
-- **Database**: PostgreSQL with SQLModel ORM
-- **Task Queue**: Celery with Redis
-- **Bot Framework**: python-telegram-bot
-- **Monitoring**: Prometheus + Grafana
-
-## 📋 Prerequisites
-
-- Python 3.9+
-- PostgreSQL 13+
-- Redis 6+
-- 3x-ui Panel
-
-## ⚙️ Installation
+### Automated Installation (Recommended)
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/v2ray-bot.git
-cd v2ray-bot
+git clone <repository-url>
+cd project-root
 ```
 
-2. Create and activate virtual environment:
+2. Make the installer executable:
 ```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate  # Windows
+chmod +x install.sh
 ```
 
-3. Install dependencies:
+3. Run the installer:
 ```bash
-pip install -r requirements.txt
+./install.sh
 ```
 
-4. Set up environment variables:
+The installer will:
+- Install all system dependencies
+- Set up Docker and Docker Compose
+- Configure PostgreSQL and Redis
+- Set up environment variables with secure defaults
+- Build and start all services
+- Run database migrations
+- Create an admin user
+- Generate and save secure passwords
+
+### Manual Installation
+
+If you prefer to install components manually, follow these steps:
+
+#### Prerequisites
+
+1. System Requirements:
+   - Ubuntu Server (20.04 LTS or later)
+   - Sudo privileges
+   - At least 2GB RAM
+   - 10GB free disk space
+
+2. Install system dependencies:
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+    python3.10 \
+    python3.10-venv \
+    python3-pip \
+    postgresql \
+    postgresql-contrib \
+    redis-server \
+    git \
+    curl \
+    build-essential \
+    libpq-dev
+```
+
+3. Install Docker and Docker Compose:
+```bash
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+```
+
+#### Project Setup
+
+1. Configure environment variables:
 ```bash
 cp .env.example .env
-# Edit .env with your configuration
+# Edit .env with your configurations
+nano .env
 ```
 
-5. Initialize database:
+2. Build and start services:
 ```bash
-alembic upgrade head
-python backend/scripts/create_admin.py
+docker-compose up -d --build
 ```
 
-## 🚀 Running the Application
-
-1. Start Redis server:
+3. Run database migrations:
 ```bash
-redis-server
+docker-compose exec api alembic upgrade head
 ```
 
-2. Start Celery workers:
+4. Create admin user:
 ```bash
-celery -A backend.app.tasks.celery worker --loglevel=info
-celery -A backend.app.tasks.celery beat --loglevel=info
+docker-compose exec api python backend/scripts/create_admin.py
 ```
 
-3. Start the FastAPI server:
-```bash
-uvicorn backend.app.main:app --reload
-```
+## 🌐 Services
 
-4. Start the Telegram bot:
-```bash
-python -m backend.app.bot.telegram_bot
-```
+The project includes several services:
+
+- **API** (Port 8000): FastAPI backend service
+  - API Documentation: http://localhost:8000/api/docs
+  - ReDoc Documentation: http://localhost:8000/api/redoc
+
+- **Database** (Port 5432): PostgreSQL database
+  - Persistent storage for application data
+  - Automated backups
+
+- **Redis** (Port 6379): Caching and message broker
+  - Session management
+  - Rate limiting
+  - Task queue broker
+
+- **Celery**: Background task processing
+  - Worker: Processes background tasks
+  - Beat: Schedules periodic tasks
+  - Flower (Port 5555): Task monitoring interface
+
+- **Monitoring**:
+  - Prometheus (Port 9090): Metrics collection
+  - Grafana (Port 3000): Metrics visualization
+  - System and application metrics monitoring
+
+- **Telegram Bot**: Automated notifications and commands
+  - User notifications
+  - Administrative commands
+  - Status updates
 
 ## 🔧 Configuration
 
-### Environment Variables (.env)
-```env
-# Bot Configuration
-TELEGRAM_BOT_TOKEN=your_bot_token
-ADMIN_GROUP_ID=admin_group_id
-PAYMENT_CHANNEL_ID=payment_channel_id
+### Environment Variables
 
-# Database
-POSTGRES_SERVER=localhost
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_password
-POSTGRES_DB=v2ray_bot
+Key configurations in `.env`:
 
-# Redis
-REDIS_URL=redis://localhost:6379/0
-
-# 3x-ui Panel
-XUI_PANEL_URL=https://your-panel-url
-XUI_USERNAME=admin
-XUI_PASSWORD=your_password
+```ini
+# Base
+PROJECT_NAME="V2Ray Management System"
+VERSION="7.0.0"
 
 # Security
-SECRET_KEY=your_secret_key
+SECRET_KEY="your-secret-key"
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Database
+POSTGRES_USER="v2ray_user"
+POSTGRES_PASSWORD="your-password"
+POSTGRES_DB="v2ray_db"
+
+# Redis
+REDIS_PASSWORD="your-redis-password"
+
+# Telegram Bot
+TELEGRAM_BOT_TOKEN="your-bot-token"
 ```
 
-## 📱 Bot Commands
+### Security Recommendations
 
-- `/start` - Start the bot and register
-- `/buy` - View subscription plans
-- `/wallet` - Manage wallet
-- `/profile` - View profile and subscriptions
-- `/support` - Contact support
-- `/servers` - View available servers
-- `/change_server` - Switch between servers
-- `/vip_status` - Check VIP status
-- `/help` - Show help message
+1. **Passwords**:
+   - Change default passwords
+   - Use strong, unique passwords
+   - Regularly rotate credentials
 
-## 👥 User Roles
+2. **Firewall**:
+   - Configure UFW or similar
+   - Only expose necessary ports
+   - Use reverse proxy for production
 
-### 👤 Regular User
-- Buy subscriptions
-- Manage wallet
-- Contact support
-- Switch servers
-
-### ⭐ VIP User
-- Special discounts
-- Priority support
-- Unlimited server switching
-- Extra features
-
-### 🛠️ Support
-- Handle user tickets
-- Process payments
-- Basic admin functions
-
-### 👑 Admin
-- Full system access
-- Manage users and roles
-- Monitor servers
-- Configure settings
-
-## 🔄 Automated Tasks
-
-- Subscription monitoring (every 15 minutes)
-- Server synchronization (every 5 minutes)
-- Health checks (every 10 minutes)
-- Auto-renewals (daily)
-- Promotional offers (daily)
-
-## 🔒 Security Features
-
-- Phone number validation
-- Payment verification
-- Fraud detection
-- Rate limiting
-- Access control
-- Secure API endpoints
+3. **SSL/TLS**:
+   - Set up HTTPS in production
+   - Use Let's Encrypt for certificates
+   - Enable HSTS
 
 ## 📊 Monitoring
 
-The system includes comprehensive monitoring:
+### Grafana Dashboards
 
-- Server performance metrics
-- User activity tracking
-- Payment statistics
-- System health checks
-- Error logging and alerts
+1. Access Grafana:
+   - URL: http://localhost:3000
+   - Default credentials: admin:your-grafana-password
+
+2. Available dashboards:
+   - System Metrics
+   - Application Performance
+   - User Analytics
+   - Service Health
+
+### Prometheus Metrics
+
+- Endpoint: http://localhost:9090
+- Custom metrics available at /metrics
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+1. Service not starting:
+```bash
+# Check service status
+docker-compose ps
+
+# View logs
+docker-compose logs -f [service-name]
+```
+
+2. Database connection issues:
+```bash
+# Check database status
+docker-compose exec db pg_isready
+
+# View database logs
+docker-compose logs db
+```
+
+3. Redis connection issues:
+```bash
+# Check Redis status
+docker-compose exec redis redis-cli ping
+
+# View Redis logs
+docker-compose logs redis
+```
+
+### Maintenance
+
+1. Backup database:
+```bash
+docker-compose exec db pg_dump -U v2ray_user v2ray_db > backup.sql
+```
+
+2. Restore database:
+```bash
+docker-compose exec -T db psql -U v2ray_user v2ray_db < backup.sql
+```
+
+3. Update services:
+```bash
+git pull
+docker-compose up -d --build
+docker-compose exec api alembic upgrade head
+```
+
+## 📝 License
+
+[Your License Here]
 
 ## 🤝 Contributing
 
@@ -203,17 +253,8 @@ The system includes comprehensive monitoring:
 4. Push to the branch
 5. Create a Pull Request
 
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- [FastAPI](https://fastapi.tiangolo.com/)
-- [python-telegram-bot](https://python-telegram-bot.org/)
-- [3x-ui Panel](https://github.com/XTLS/Xray-core)
-- [SQLModel](https://sqlmodel.tiangolo.com/)
-
 ## 📞 Support
 
-For support, please join our Telegram group or open an issue in the repository.
+- GitHub Issues: [Repository Issues]
+- Documentation: [Link to Docs]
+- Community: [Link to Community]
