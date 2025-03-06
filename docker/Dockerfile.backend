@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     curl \
+    netcat \
     && rm -rf /var/lib/apt/lists/*
 
 # 📂 Create and set working directory
@@ -30,7 +31,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 📁 Copy project files
 COPY backend /app/backend
-COPY .env /app/.env
 
 # 🔄 Copy Alembic configuration and migrations
 COPY backend/alembic.ini .
@@ -40,7 +40,7 @@ COPY backend/migrations /app/migrations
 RUN echo '#!/bin/bash\n\
 # Wait for database\n\
 echo "Waiting for PostgreSQL..."\n\
-while ! nc -z $POSTGRES_SERVER 5432; do\n\
+while ! nc -z db 5432; do\n\
   sleep 1\n\
 done\n\
 echo "PostgreSQL started"\n\
