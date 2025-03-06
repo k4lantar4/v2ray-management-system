@@ -1,260 +1,130 @@
 # V2Ray Management System
 
-A comprehensive management system built with FastAPI, PostgreSQL, Redis, and Docker.
+A comprehensive management system for V2Ray with a modern web interface, Telegram bot integration, and advanced monitoring capabilities.
 
-## 🚀 Quick Installation
+## System Requirements
 
-### Automated Installation (Recommended)
+- Docker (20.10.0 or higher)
+- Docker Compose (2.0.0 or higher)
+- Git
+- 2GB RAM minimum (4GB recommended)
+- 20GB free disk space
+
+## Quick Installation
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd project-root
+git clone https://github.com/k4lantar4/v2ray-management-system.git
+cd v2ray-management-system
 ```
 
-2. Make the installer executable:
-```bash
-chmod +x install.sh
-```
-
-3. Run the installer:
+2. Run the interactive installer:
 ```bash
 ./install.sh
 ```
 
-The installer will:
-- Install all system dependencies
-- Set up Docker and Docker Compose
-- Configure PostgreSQL and Redis
-- Set up environment variables with secure defaults
-- Build and start all services
-- Run database migrations
-- Create an admin user
-- Generate and save secure passwords
+The installer will guide you through:
+- System requirements check
+- Environment configuration
+- Database setup
+- Admin user creation
+- Service deployment
 
-### Manual Installation
+## What the Installer Does
 
-If you prefer to install components manually, follow these steps:
+1. **System Check**
+   - Verifies required software (Docker, Docker Compose, Git)
+   - Checks system resources
 
-#### Prerequisites
+2. **Configuration**
+   - Creates secure environment variables
+   - Configures database settings
+   - Sets up Redis connection
+   - Configures Telegram bot integration
+   - Sets up backup parameters
 
-1. System Requirements:
-   - Ubuntu Server (20.04 LTS or later)
-   - Sudo privileges
-   - At least 2GB RAM
-   - 10GB free disk space
+3. **Database Initialization**
+   - Creates database schema
+   - Runs migrations
+   - Creates admin user
 
-2. Install system dependencies:
-```bash
-sudo apt-get update
-sudo apt-get install -y \
-    python3.10 \
-    python3.10-venv \
-    python3-pip \
-    postgresql \
-    postgresql-contrib \
-    redis-server \
-    git \
-    curl \
-    build-essential \
-    libpq-dev
-```
+4. **Service Deployment**
+   - Builds Docker images
+   - Starts all services
+   - Verifies system health
 
-3. Install Docker and Docker Compose:
-```bash
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
+## Post-Installation
 
-# Install Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-```
+After successful installation, you can access:
 
-#### Project Setup
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000/api/docs
+- Admin Panel: http://localhost:3000/admin
 
-1. Configure environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your configurations
-nano .env
-```
+## Security Recommendations
 
-2. Build and start services:
-```bash
-docker-compose up -d --build
-```
+1. **Change Default Passwords**
+   - Change the admin password after first login
+   - Secure your database password
+   - Update Redis password if needed
 
-3. Run database migrations:
-```bash
-docker-compose exec api alembic upgrade head
-```
+2. **Configure Firewall**
+   - Allow only necessary ports
+   - Set up rate limiting
+   - Configure SSL/TLS
 
-4. Create admin user:
-```bash
-docker-compose exec api python backend/scripts/create_admin.py
-```
+3. **Regular Backups**
+   - Enable automated backups
+   - Test backup restoration
+   - Store backups securely
 
-## 🌐 Services
+## Components
 
-The project includes several services:
+- **Frontend**: Next.js with TypeScript
+- **Backend**: FastAPI with PostgreSQL
+- **Cache**: Redis
+- **Bot**: Telegram Bot Integration
+- **Monitoring**: Prometheus & Server Metrics
+- **Backup System**: Automated backup and restore
 
-- **API** (Port 8000): FastAPI backend service
-  - API Documentation: http://localhost:8000/api/docs
-  - ReDoc Documentation: http://localhost:8000/api/redoc
+## Environment Variables
 
-- **Database** (Port 5432): PostgreSQL database
-  - Persistent storage for application data
-  - Automated backups
+Key environment variables that will be configured during installation:
 
-- **Redis** (Port 6379): Caching and message broker
-  - Session management
-  - Rate limiting
-  - Task queue broker
+- `DATABASE_URL`: PostgreSQL connection string
+- `REDIS_HOST`: Redis server host
+- `TELEGRAM_BOT_TOKEN`: Telegram bot API token
+- `SECRET_KEY`: Application secret key
+- `BACKUP_ENCRYPTION_KEY`: Backup encryption key
 
-- **Celery**: Background task processing
-  - Worker: Processes background tasks
-  - Beat: Schedules periodic tasks
-  - Flower (Port 5555): Task monitoring interface
+For a complete list of environment variables, see `.env.example`.
 
-- **Monitoring**:
-  - Prometheus (Port 9090): Metrics collection
-  - Grafana (Port 3000): Metrics visualization
-  - System and application metrics monitoring
+## Troubleshooting
 
-- **Telegram Bot**: Automated notifications and commands
-  - User notifications
-  - Administrative commands
-  - Status updates
+If you encounter issues during installation:
 
-## 🔧 Configuration
+1. **Database Connection Issues**
+   - Check PostgreSQL container logs
+   - Verify database credentials
+   - Ensure PostgreSQL is running
 
-### Environment Variables
+2. **Redis Connection Issues**
+   - Verify Redis container status
+   - Check Redis password
+   - Ensure Redis is running
 
-Key configurations in `.env`:
+3. **Service Start Issues**
+   - Check Docker logs
+   - Verify port availability
+   - Check system resources
 
-```ini
-# Base
-PROJECT_NAME="V2Ray Management System"
-VERSION="7.0.0"
+## Support
 
-# Security
-SECRET_KEY="your-secret-key"
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+For issues and support:
+- Create an issue in the GitHub repository
+- Check the documentation
+- Contact the development team
 
-# Database
-POSTGRES_USER="v2ray_user"
-POSTGRES_PASSWORD="your-password"
-POSTGRES_DB="v2ray_db"
-
-# Redis
-REDIS_PASSWORD="your-redis-password"
-
-# Telegram Bot
-TELEGRAM_BOT_TOKEN="your-bot-token"
-```
-
-### Security Recommendations
-
-1. **Passwords**:
-   - Change default passwords
-   - Use strong, unique passwords
-   - Regularly rotate credentials
-
-2. **Firewall**:
-   - Configure UFW or similar
-   - Only expose necessary ports
-   - Use reverse proxy for production
-
-3. **SSL/TLS**:
-   - Set up HTTPS in production
-   - Use Let's Encrypt for certificates
-   - Enable HSTS
-
-## 📊 Monitoring
-
-### Grafana Dashboards
-
-1. Access Grafana:
-   - URL: http://localhost:3000
-   - Default credentials: admin:your-grafana-password
-
-2. Available dashboards:
-   - System Metrics
-   - Application Performance
-   - User Analytics
-   - Service Health
-
-### Prometheus Metrics
-
-- Endpoint: http://localhost:9090
-- Custom metrics available at /metrics
-
-## 🔍 Troubleshooting
-
-### Common Issues
-
-1. Service not starting:
-```bash
-# Check service status
-docker-compose ps
-
-# View logs
-docker-compose logs -f [service-name]
-```
-
-2. Database connection issues:
-```bash
-# Check database status
-docker-compose exec db pg_isready
-
-# View database logs
-docker-compose logs db
-```
-
-3. Redis connection issues:
-```bash
-# Check Redis status
-docker-compose exec redis redis-cli ping
-
-# View Redis logs
-docker-compose logs redis
-```
-
-### Maintenance
-
-1. Backup database:
-```bash
-docker-compose exec db pg_dump -U v2ray_user v2ray_db > backup.sql
-```
-
-2. Restore database:
-```bash
-docker-compose exec -T db psql -U v2ray_user v2ray_db < backup.sql
-```
-
-3. Update services:
-```bash
-git pull
-docker-compose up -d --build
-docker-compose exec api alembic upgrade head
-```
-
-## 📝 License
+## License
 
 [Your License Here]
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## 📞 Support
-
-- GitHub Issues: [Repository Issues]
-- Documentation: [Link to Docs]
-- Community: [Link to Community]
