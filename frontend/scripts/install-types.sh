@@ -5,7 +5,8 @@ npm install --save-dev \
   @types/react@18.2.0 \
   @types/react-dom@18.2.0 \
   @types/node@18.0.0 \
-  @types/stylis@4.2.0
+  @types/stylis@4.2.0 \
+  @types/moment-jalaali@0.7.9
 
 # Create types directory if it doesn't exist
 mkdir -p src/types

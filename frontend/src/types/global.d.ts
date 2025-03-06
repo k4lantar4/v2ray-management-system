@@ -1,3 +1,12 @@
+declare module 'react' {
+  export = React;
+  export as namespace React;
+  
+  interface HTMLAttributes<T> extends AriaAttributes, DOMAttributes<T> {
+    css?: any;
+  }
+}
+
 declare module 'next-intl' {
   export function useTranslations(namespace?: string): (key: string) => string;
 }

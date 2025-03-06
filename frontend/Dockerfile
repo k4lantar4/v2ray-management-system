@@ -3,21 +3,17 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files and scripts
+# Copy package files
 COPY package*.json ./
-COPY scripts ./scripts
 
-# Install dependencies and types
-RUN npm install --production=false && \
-    chmod +x ./scripts/install-types.sh && \
-    ./scripts/install-types.sh
+# Install dependencies
+RUN npm install
 
-# Copy remaining project files
+# Copy project files
 COPY . .
 
-# Create types directory and next-env.d.ts
-RUN mkdir -p src/types && \
-    echo '/// <reference types="next" />' > next-env.d.ts && \
+# Create next-env.d.ts
+RUN echo '/// <reference types="next" />' > next-env.d.ts && \
     echo '/// <reference types="next/image-types/global" />' >> next-env.d.ts
 
 # Build project
@@ -38,9 +34,6 @@ COPY --from=builder /app/next-env.d.ts ./next-env.d.ts
 # Set environment variables
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
-
-# Install only production dependencies
-RUN npm install --production
 
 # Expose the port
 EXPOSE 3000
