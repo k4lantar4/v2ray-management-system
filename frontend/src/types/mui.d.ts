@@ -1,5 +1,4 @@
 import { ReactNode } from 'react';
-import { AutocompleteProps, TextFieldProps } from '@mui/material';
 
 declare module '@mui/material' {
   interface SelectChangeEvent<T = string> {
@@ -23,6 +22,33 @@ declare module '@mui/material' {
       'aria-controls'?: string;
     };
   }
+}
+
+declare module '@mui/material/Chip' {
+  export interface ChipProps {
+    label?: ReactNode;
+    color?: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning';
+    variant?: 'filled' | 'outlined';
+    size?: 'small' | 'medium';
+    onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
+    onDelete?: (event: React.MouseEvent<HTMLDivElement>) => void;
+    className?: string;
+    style?: React.CSSProperties;
+  }
+  const Chip: React.ComponentType<ChipProps>;
+  export default Chip;
+}
+
+declare module '@mui/material/Typography' {
+  export interface TypographyProps {
+    component?: React.ElementType;
+    variant?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'subtitle1' | 'subtitle2' | 'body1' | 'body2' | 'caption' | 'button' | 'overline' | 'inherit';
+    children?: ReactNode;
+    className?: string;
+    style?: React.CSSProperties;
+  }
+  const Typography: React.ComponentType<TypographyProps>;
+  export default Typography;
 }
 
 declare module '@mui/x-date-pickers' {
