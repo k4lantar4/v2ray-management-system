@@ -1,8 +1,8 @@
 # 🌟 Core Dependencies
-fastapi==0.104.1
+fastapi==0.109.2
 uvicorn==0.24.0
 python-telegram-bot==20.6
-sqlmodel==0.0.11
+sqlmodel==0.0.20  # First version with pydantic 2.x support
 alembic==1.12.1
 pydantic==2.4.2
 python-dotenv==1.0.0
