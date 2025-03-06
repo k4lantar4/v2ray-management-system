@@ -37,7 +37,7 @@ The system comes with an automated installer that handles everything including:
 ### One-Command Installation
 
 ```bash
-wget -O install.sh https://raw.githubusercontent.com/yourusername/v2ray-management-system/main/install.sh && chmod +x install.sh && ./install.sh
+git clone https://github.com/k4lantar4/v2ray-management-system.git && cd v2ray-management-system && chmod +x install.sh && ./install.sh
 ```
 
 Or if you've already cloned the repository:
