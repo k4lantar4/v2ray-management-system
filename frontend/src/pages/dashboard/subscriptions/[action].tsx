@@ -13,7 +13,8 @@ import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Autocomplete from '@mui/material/Autocomplete';
-import { DatePicker } from '@mui/x-date-pickers';
+import DatePicker from '@mui/x-date-pickers/DatePicker';
+import { parseISO, isAfter, startOfDay } from 'date-fns';
 
 import { useTranslations } from 'next-intl';
 import { useSnackbar } from 'notistack';
@@ -53,6 +54,7 @@ export default function SubscriptionForm() {
   const isEdit = action === 'edit';
 
   const [loading, setLoading] = useState(false);
+  const [fetchingUsers, setFetchingUsers] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<SubscriptionFormData>({
@@ -67,17 +69,23 @@ export default function SubscriptionForm() {
 
   useEffect(() => {
     fetchUsers();
-    if (isEdit && id) {
+  }, []); // Fetch users on mount
+
+  useEffect(() => {
+    if (isEdit && id && users.length > 0) {
       fetchSubscription(Number(id));
     }
-  }, [isEdit, id]);
+  }, [isEdit, id, users]); // Fetch subscription after users are loaded
 
   const fetchUsers = async () => {
     try {
+      setFetchingUsers(true);
       const data = await userService.getUsers();
       setUsers(data);
     } catch (error) {
       enqueueSnackbar(t('users.fetchError'), { variant: 'error' });
+    } finally {
+      setFetchingUsers(false);
     }
   };
 
@@ -104,23 +112,57 @@ export default function SubscriptionForm() {
     }
   };
 
+  const validateDates = () => {
+    try {
+      const startDate = startOfDay(parseISO(formData.start_date));
+      const endDate = startOfDay(parseISO(formData.end_date));
+      return !isAfter(startDate, endDate);
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const validateForm = () => {
+    if (!formData.user_id) {
+      enqueueSnackbar(t('subscriptions.errors.userRequired'), { variant: 'error' });
+      return false;
+    }
+    if (!validateDates()) {
+      enqueueSnackbar(t('subscriptions.errors.invalidDates'), { variant: 'error' });
+      return false;
+    }
+    if (formData.price < 0 || isNaN(formData.price)) {
+      enqueueSnackbar(t('subscriptions.errors.invalidPrice'), { variant: 'error' });
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+    
     try {
       setLoading(true);
+      const payload = {
+        ...formData,
+        // Ensure dates are in UTC ISO format
+        start_date: new Date(formData.start_date).toISOString(),
+        end_date: new Date(formData.end_date).toISOString(),
+      };
+
       if (isEdit) {
-        await subscriptionService.updateSubscription(Number(id), formData);
+        await subscriptionService.updateSubscription(Number(id), payload);
         enqueueSnackbar(t('subscriptions.updateSuccess'), { variant: 'success' });
       } else {
-        await subscriptionService.createSubscription(formData);
+        await subscriptionService.createSubscription(payload);
         enqueueSnackbar(t('subscriptions.createSuccess'), { variant: 'success' });
       }
       router.push('/dashboard/subscriptions');
-    } catch (error) {
-      enqueueSnackbar(
-        isEdit ? t('subscriptions.updateError') : t('subscriptions.createError'),
-        { variant: 'error' }
-      );
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.detail || 
+        (isEdit ? t('subscriptions.updateError') : t('subscriptions.createError'));
+      enqueueSnackbar(errorMessage, { variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -184,11 +226,16 @@ export default function SubscriptionForm() {
                   value={selectedUser}
                   onChange={handleUserChange}
                   getOptionLabel={(option) => option.full_name || option.phone}
+                  loading={fetchingUsers}
+                  loadingText={t('common.loading')}
+                  noOptionsText={t('users.noOptions')}
                   renderInput={(params) => (
                     <TextField
                       {...params}
                       required
+                      error={!formData.user_id}
                       label={t('subscriptions.fields.user')}
+                      helperText={!formData.user_id && t('subscriptions.errors.userRequired')}
                     />
                   )}
                   disabled={isEdit}
@@ -218,14 +265,22 @@ export default function SubscriptionForm() {
                   label={t('subscriptions.fields.startDate')}
                   value={new Date(formData.start_date)}
                   onChange={(date: Date | null) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      start_date: date?.toISOString() || new Date().toISOString(),
-                    }));
+                    if (date) {
+                      setFormData(prev => ({
+                        ...prev,
+                        start_date: startOfDay(date).toISOString(),
+                      }));
+                    }
                   }}
-                  renderInput={(params) => <TextField {...params} />}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      required: true,
+                      error: !validateDates(),
+                      helperText: !validateDates() ? t('subscriptions.errors.invalidDates') : ''
+                    }
+                  }}
                 />
-
               </Grid>
 
               <Grid item xs={12} md={6}>
@@ -233,14 +288,23 @@ export default function SubscriptionForm() {
                   label={t('subscriptions.fields.endDate')}
                   value={new Date(formData.end_date)}
                   onChange={(date: Date | null) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      end_date: date?.toISOString() || new Date().toISOString(),
-                    }));
+                    if (date) {
+                      setFormData(prev => ({
+                        ...prev,
+                        end_date: startOfDay(date).toISOString(),
+                      }));
+                    }
                   }}
-                  renderInput={(params) => <TextField {...params} />}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      required: true,
+                      error: !validateDates(),
+                      helperText: !validateDates() ? t('subscriptions.errors.invalidDates') : ''
+                    }
+                  }}
+                  minDate={new Date(formData.start_date)}
                 />
-
               </Grid>
 
               <Grid item xs={12} md={6}>
@@ -251,8 +315,15 @@ export default function SubscriptionForm() {
                   label={t('subscriptions.fields.price')}
                   value={formData.price}
                   onChange={handleInputChange}
+                  error={formData.price < 0 || isNaN(formData.price)}
+                  helperText={
+                    formData.price < 0 || isNaN(formData.price) 
+                      ? t('subscriptions.errors.invalidPrice') 
+                      : ''
+                  }
                   InputProps={{
                     endAdornment: <Typography>ریال</Typography>,
+                    inputProps: { min: 0 }
                   }}
                 />
               </Grid>

@@ -9,6 +9,8 @@ import { prefixer } from 'stylis';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { SnackbarProvider } from 'notistack';
 import { useTranslations } from 'next-intl';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 import { AuthProvider } from '../contexts/AuthContext';
 import theme from '../utils/theme';
@@ -42,19 +44,21 @@ export default function App({ Component, pageProps }: AppProps) {
     <CacheProvider value={cacheRtl}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <SnackbarProvider
-            maxSnack={3}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'left',
-            }}
-            autoHideDuration={3000}
-          >
-            <AuthProvider>
-              <Component {...pageProps} />
-            </AuthProvider>
-          </SnackbarProvider>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <CssBaseline />
+            <SnackbarProvider
+              maxSnack={3}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'left',
+              }}
+              autoHideDuration={3000}
+            >
+              <AuthProvider>
+                <Component {...pageProps} />
+              </AuthProvider>
+            </SnackbarProvider>
+          </LocalizationProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </CacheProvider>
