@@ -1,0 +1,6 @@
+fastapi
+sqlmodel
+celery
+jose
+python-telegram-bot
+redis
