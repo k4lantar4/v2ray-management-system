@@ -1,24 +1,20 @@
 import { useRouter } from 'next/router';
-import {
-  Box,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Divider,
-  Typography,
-} from '@mui/material';
-import {
-  Dashboard as DashboardIcon,
-  People as PeopleIcon,
-  Subscriptions as SubscriptionsIcon,
-  Support as SupportIcon,
-  Settings as SettingsIcon,
-  Storage as StorageIcon,
-  Payment as PaymentIcon,
-  LocalOffer as DiscountIcon,
-} from '@mui/icons-material';
+import Box from '@mui/material/Box';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Divider from '@mui/material/Divider';
+import Typography from '@mui/material/Typography';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import PeopleIcon from '@mui/icons-material/People';
+import SubscriptionsIcon from '@mui/icons-material/Subscriptions';
+import SupportIcon from '@mui/icons-material/Support';
+import SettingsIcon from '@mui/icons-material/Settings';
+import StorageIcon from '@mui/icons-material/Storage';
+import PaymentIcon from '@mui/icons-material/Payment';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import { useTranslations } from 'next-intl';
 
 // نقش‌های کاربری و دسترسی‌های مربوطه
@@ -79,7 +75,7 @@ const menuItems = [
   {
     key: 'discounts',
     label: 'discounts.title',
-    icon: <DiscountIcon />,
+    icon: <LocalOfferIcon />,
     path: '/dashboard/discounts',
   },
   {
