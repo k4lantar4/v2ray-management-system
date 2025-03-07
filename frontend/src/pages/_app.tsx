@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { AppProps } from 'next/app';
-import { ThemeProvider } from '@mui/system';
+import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
@@ -13,8 +13,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 import { AuthProvider } from '../contexts/AuthContext';
-import theme from '../utils/theme';
-import faMessages from '../translations/fa.json';
+import theme from '../theme'; // Ensure the correct path to the theme file
 
 // Create rtl cache
 const cacheRtl = createCache({
