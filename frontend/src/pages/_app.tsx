@@ -1,12 +1,11 @@
 import { useEffect } from 'react';
 import type { AppProps } from 'next/app';
-import { ThemeProvider } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/system';
 import CssBaseline from '@mui/material/CssBaseline';
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
 import rtlPlugin from 'stylis-plugin-rtl';
 import { prefixer } from 'stylis';
-import { NextIntlClientProvider } from 'next-intl';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { SnackbarProvider } from 'notistack';
 
@@ -39,23 +38,21 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <CacheProvider value={cacheRtl}>
-      <NextIntlClientProvider messages={faMessages} locale="fa">
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <SnackbarProvider
-              maxSnack={3}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'left',
-              }}
-              autoHideDuration={3000}
-            >
-              <Component {...pageProps} />
-            </SnackbarProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
-      </NextIntlClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <SnackbarProvider
+            maxSnack={3}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'left',
+            }}
+            autoHideDuration={3000}
+          >
+            <Component {...pageProps} />
+          </SnackbarProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </CacheProvider>
   );
 }
