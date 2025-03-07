@@ -217,28 +217,30 @@ export default function SubscriptionForm() {
                 <DatePicker
                   label={t('subscriptions.fields.startDate')}
                   value={new Date(formData.start_date)}
-                  onChange={(date: Date | null) =>
+                  onChange={(date: Date | null) => {
                     setFormData(prev => ({
                       ...prev,
                       start_date: date?.toISOString() || new Date().toISOString(),
-                    }))
-                  }
-                  renderInput={(params: any) => <TextField {...params} />}
+                    }));
+                  }}
+                  renderInput={(params) => <TextField {...params} />}
                 />
+
               </Grid>
 
               <Grid item xs={12} md={6}>
                 <DatePicker
                   label={t('subscriptions.fields.endDate')}
                   value={new Date(formData.end_date)}
-                  onChange={(date: Date | null) =>
+                  onChange={(date: Date | null) => {
                     setFormData(prev => ({
                       ...prev,
                       end_date: date?.toISOString() || new Date().toISOString(),
-                    }))
-                  }
-                  renderInput={(params: any) => <TextField {...params} />}
+                    }));
+                  }}
+                  renderInput={(params) => <TextField {...params} />}
                 />
+
               </Grid>
 
               <Grid item xs={12} md={6}>
