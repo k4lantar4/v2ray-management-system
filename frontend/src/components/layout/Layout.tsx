@@ -1,38 +1,39 @@
 import { ReactNode, useState } from 'react';
-import { styled } from '@mui/material/styles';
-import {
-  Box,
-  CssBaseline,
-  Drawer,
-  AppBar,
-  Toolbar,
-  Typography,
-  IconButton,
-  Container,
-} from '@mui/material';
-import {
-  Menu as MenuIcon,
-  ChevronRight as ChevronRightIcon,
-} from '@mui/icons-material';
+import styled from '@emotion/styled';
+import { Theme } from '@mui/material';
+import Box from '@mui/material/Box';
+import CssBaseline from '@mui/material/CssBaseline';
+import Drawer from '@mui/material/Drawer';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import Container from '@mui/material/Container';
+import MenuIcon from '@mui/icons-material/Menu';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
 const drawerWidth = 240;
 
-const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
+interface MainProps {
   open?: boolean;
-}>(({ theme, open }) => ({
+}
+
+const Main = styled('main', {
+  shouldForwardProp: (prop: string): boolean => prop !== 'open',
+})<MainProps>(({ theme, open }) => ({
   flexGrow: 1,
-  padding: theme.spacing(3),
-  transition: theme.transitions.create('margin', {
-    easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.leavingScreen,
+  padding: (theme as Theme).spacing(3),
+  transition: (theme as Theme).transitions.create('margin', {
+    easing: (theme as Theme).transitions.easing.sharp,
+    duration: (theme as Theme).transitions.duration.leavingScreen,
   }),
   marginRight: -drawerWidth,
   ...(open && {
-    transition: theme.transitions.create('margin', {
-      easing: theme.transitions.easing.easeOut,
-      duration: theme.transitions.duration.enteringScreen,
+    transition: (theme as Theme).transitions.create('margin', {
+      easing: (theme as Theme).transitions.easing.easeOut,
+      duration: (theme as Theme).transitions.duration.enteringScreen,
     }),
     marginRight: 0,
   }),
@@ -58,7 +59,7 @@ export default function Layout({ children, title = 'داشبورد' }: LayoutPro
         sx={{
           width: open ? `calc(100% - ${drawerWidth}px)` : '100%',
           mr: open ? `${drawerWidth}px` : 0,
-          transition: (theme) =>
+          transition: (theme: Theme) =>
             theme.transitions.create(['margin', 'width'], {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.leavingScreen,
