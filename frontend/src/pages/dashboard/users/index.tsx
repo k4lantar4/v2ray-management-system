@@ -1,31 +1,29 @@
 import { useState, useEffect } from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  IconButton,
-  Grid,
-  TextField,
-  Chip,
-} from '@mui/material';
+import { useRouter } from 'next/router';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Grid from '@mui/material/Grid';
+import TextField from '@mui/material/TextField';
+import Chip from '@mui/material/Chip';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Search as SearchIcon,
-} from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
 import { useTranslations } from 'next-intl';
 import { useSnackbar } from 'notistack';
-import Layout from '@/components/layout/Layout';
-import { userService } from '@/services/api';
-import { useAuthGuard } from '@/contexts/AuthContext';
+import Layout from '../../../components/layout/Layout';
+import { userService } from '../../../services/api';
+import { useAuthGuard } from '../../../contexts/AuthContext';
 
 export default function Users() {
   useAuthGuard(['ADMIN']);
   const t = useTranslations();
+  const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -166,7 +164,7 @@ export default function Users() {
             loading={loading}
             autoHeight
             pagination
-            disableSelectionOnClick
+            disableRowSelectionOnClick
             sx={{ direction: 'rtl' }}
           />
         </CardContent>

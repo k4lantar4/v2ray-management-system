@@ -1,28 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  Grid,
-  TextField,
-  Divider,
-  Paper,
-  Avatar,
-  CircularProgress,
-} from '@mui/material';
-import {
-  Send as SendIcon,
-  ArrowBack as ArrowBackIcon,
-} from '@mui/icons-material';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import Grid from '@mui/material/Grid';
+import TextField from '@mui/material/TextField';
+import Divider from '@mui/material/Divider';
+import Paper from '@mui/material/Paper';
+import Avatar from '@mui/material/Avatar';
+import CircularProgress from '@mui/material/CircularProgress';
+import SendIcon from '@mui/icons-material/Send';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useTranslations } from 'next-intl';
 import { useSnackbar } from 'notistack';
-import Layout from '@/components/layout/Layout';
-import { ticketService } from '@/services/api';
-import { useAuth } from '@/contexts/AuthContext';
-import { TicketStatusChip, PriorityChip } from '@/components/common/UserStatusChip';
+import Layout from '../../../components/layout/Layout';
+import { ticketService } from '../../../services/api';
+import { useAuth } from '../../../contexts/AuthContext';
+import { TicketStatusChip, PriorityChip } from './index';
 
 interface Message {
   id: number;

@@ -1,27 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import {
-  Box,
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  SelectChangeEvent,
-  MenuItem,
-  Typography,
-  CircularProgress,
-  Autocomplete,
-} from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Grid from '@mui/material/Grid';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import Autocomplete from '@mui/material/Autocomplete';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { useTranslations } from 'next-intl';
 import { useSnackbar } from 'notistack';
-import Layout from '@/components/layout/Layout';
-import { subscriptionService, userService } from '@/services/api';
-import { useAuthGuard } from '@/contexts/AuthContext';
+import Layout from '../../../components/layout/Layout';
+import { subscriptionService, userService } from '../../../services/api';
+import { useAuthGuard } from '../../../contexts/AuthContext';
 
 interface SubscriptionFormData {
   user_id: number;
@@ -128,7 +125,7 @@ export default function SubscriptionForm() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -139,7 +136,7 @@ export default function SubscriptionForm() {
   const handleUserChange = (_event: React.SyntheticEvent, newValue: User | null) => {
     setSelectedUser(newValue);
     if (newValue) {
-      setFormData((prev: SubscriptionFormData) => ({
+      setFormData(prev => ({
         ...prev,
         user_id: newValue.id,
       }));
@@ -155,6 +152,13 @@ export default function SubscriptionForm() {
         traffic_limit: plan.traffic,
       }));
     }
+  };
+
+  const handleStatusChange = (e: SelectChangeEvent<string>) => {
+    setFormData(prev => ({
+      ...prev,
+      status: e.target.value,
+    }));
   };
 
   if (loading && isEdit) {
@@ -241,7 +245,7 @@ export default function SubscriptionForm() {
                   name="price"
                   label={t('subscriptions.fields.price')}
                   value={formData.price}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   InputProps={{
                     endAdornment: <Typography>ریال</Typography>,
                   }}
@@ -254,12 +258,7 @@ export default function SubscriptionForm() {
                   <Select
                     name="status"
                     value={formData.status}
-                    onChange={(e: SelectChangeEvent<string>) => {
-                      setFormData((prev: SubscriptionFormData) => ({
-                        ...prev,
-                        status: e.target.value,
-                      }));
-                    }}
+                    onChange={handleStatusChange}
                     label={t('subscriptions.fields.status')}
                   >
                     <MenuItem value="ACTIVE">{t('subscriptions.status.active')}</MenuItem>

@@ -1,24 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import {
-  Box,
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Typography,
-  CircularProgress,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Grid from '@mui/material/Grid';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
 import { useTranslations } from 'next-intl';
 import { useSnackbar } from 'notistack';
-import Layout from '@/components/layout/Layout';
-import { userService } from '@/services/api';
-import { useAuthGuard } from '@/contexts/AuthContext';
+import Layout from '../../../components/layout/Layout';
+import { userService } from '../../../services/api';
+import { useAuthGuard } from '../../../contexts/AuthContext';
 
 interface UserFormData {
   phone: string;
@@ -93,7 +91,15 @@ export default function UserForm() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSelectChange = (e: SelectChangeEvent) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -124,7 +130,7 @@ export default function UserForm() {
                   name="phone"
                   label={t('users.fields.phone')}
                   value={formData.phone}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   disabled={isEdit}
                 />
               </Grid>
@@ -135,7 +141,7 @@ export default function UserForm() {
                   name="full_name"
                   label={t('users.fields.fullName')}
                   value={formData.full_name}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                 />
               </Grid>
 
@@ -145,7 +151,7 @@ export default function UserForm() {
                   <Select
                     name="role"
                     value={formData.role}
-                    onChange={handleChange}
+                    onChange={handleSelectChange}
                     label={t('users.fields.role')}
                   >
                     <MenuItem value="ADMIN">{t('users.roles.admin')}</MenuItem>
@@ -162,7 +168,7 @@ export default function UserForm() {
                   <Select
                     name="status"
                     value={formData.status}
-                    onChange={handleChange}
+                    onChange={handleSelectChange}
                     label={t('users.fields.status')}
                   >
                     <MenuItem value="ACTIVE">{t('users.status.active')}</MenuItem>
@@ -179,7 +185,7 @@ export default function UserForm() {
                   name="wallet_balance"
                   label={t('users.fields.walletBalance')}
                   value={formData.wallet_balance}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   InputProps={{
                     endAdornment: <Typography>ریال</Typography>,
                   }}
@@ -193,7 +199,7 @@ export default function UserForm() {
                     type="password"
                     name="password"
                     label={t('auth.password')}
-                    onChange={handleChange}
+                    onChange={handleInputChange}
                   />
                 </Grid>
               )}

@@ -1,21 +1,17 @@
 import React from 'react';
 import { useRouter } from 'next/router';
-import {
-  Box,
-  IconButton,
-  Menu,
-  MenuItem,
-  Typography,
-  Avatar,
-  Divider,
-  ListItemIcon,
-} from '@mui/material';
-import {
-  Person as PersonIcon,
-  Settings as SettingsIcon,
-  Logout as LogoutIcon,
-  Notifications as NotificationsIcon,
-} from '@mui/icons-material';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Typography from '@mui/material/Typography';
+import Avatar from '@mui/material/Avatar';
+import Divider from '@mui/material/Divider';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import PersonIcon from '@mui/icons-material/Person';
+import SettingsIcon from '@mui/icons-material/Settings';
+import LogoutIcon from '@mui/icons-material/Logout';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useTranslations } from 'next-intl';
 
 export default function Header() {

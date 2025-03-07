@@ -1,22 +1,18 @@
 import { useEffect, useState } from 'react';
-import {
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Button,
-  CircularProgress,
-} from '@mui/material';
-import {
-  People as PeopleIcon,
-  Subscriptions as SubscriptionsIcon,
-  AttachMoney as MoneyIcon,
-  Storage as StorageIcon,
-  Add as AddIcon,
-} from '@mui/icons-material';
+import Grid from '@mui/material/Grid';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
+import PeopleIcon from '@mui/icons-material/People';
+import SubscriptionsIcon from '@mui/icons-material/Subscriptions';
+import MoneyIcon from '@mui/icons-material/AttachMoney';
+import StorageIcon from '@mui/icons-material/Storage';
+import AddIcon from '@mui/icons-material/Add';
 import { useTranslations } from 'next-intl';
-import Layout from '@/components/layout/Layout';
+import Layout from '../../components/layout/Layout';
 
 // کامپوننت کارت آمار
 const StatCard = ({ title, value, icon, loading = false }: any) => (

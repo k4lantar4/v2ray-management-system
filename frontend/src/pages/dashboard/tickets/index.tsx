@@ -1,32 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  IconButton,
-  Grid,
-  TextField,
-  Chip,
-  Avatar,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Grid from '@mui/material/Grid';
+import TextField from '@mui/material/TextField';
+import Chip from '@mui/material/Chip';
+import Avatar from '@mui/material/Avatar';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import {
-  Add as AddIcon,
-  Reply as ReplyIcon,
-  Search as SearchIcon,
-  Close as CloseIcon,
-  Chat as ChatIcon,
-} from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import ReplyIcon from '@mui/icons-material/Reply';
+import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
+import ChatIcon from '@mui/icons-material/Chat';
 import { useTranslations } from 'next-intl';
 import { useSnackbar } from 'notistack';
-import Layout from '@/components/layout/Layout';
-import { ticketService } from '@/services/api';
-import { useAuth } from '@/contexts/AuthContext';
+import Layout from '../../../components/layout/Layout';
+import { ticketService } from '../../../services/api';
+import { useAuth } from '../../../contexts/AuthContext';
 
-const TicketStatusChip = ({ status }: { status: string }) => {
+export const TicketStatusChip = ({ status }: { status: string }) => {
   const t = useTranslations();
   const statusColors: Record<string, 'success' | 'error' | 'warning' | 'info'> = {
     OPEN: 'info',
@@ -43,7 +39,7 @@ const TicketStatusChip = ({ status }: { status: string }) => {
   );
 };
 
-const PriorityChip = ({ priority }: { priority: string }) => {
+export const PriorityChip = ({ priority }: { priority: string }) => {
   const t = useTranslations();
   const priorityColors: Record<string, 'error' | 'warning' | 'info' | 'default'> = {
     HIGH: 'error',
@@ -210,7 +206,7 @@ export default function Tickets() {
             loading={loading}
             autoHeight
             pagination
-            disableSelectionOnClick
+            disableRowSelectionOnClick
             sx={{ direction: 'rtl' }}
           />
         </CardContent>

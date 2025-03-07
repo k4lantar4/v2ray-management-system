@@ -1,28 +1,24 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import {
-  Box,
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Typography,
-  CircularProgress,
-} from '@mui/material';
-import {
-  Send as SendIcon,
-  ArrowBack as ArrowBackIcon,
-} from '@mui/icons-material';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Grid from '@mui/material/Grid';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import SendIcon from '@mui/icons-material/Send';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useTranslations } from 'next-intl';
 import { useSnackbar } from 'notistack';
-import Layout from '@/components/layout/Layout';
-import { ticketService } from '@/services/api';
-import { useAuth } from '@/contexts/AuthContext';
+import Layout from '../../../components/layout/Layout';
+import { ticketService } from '../../../services/api';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface TicketFormData {
   subject: string;
@@ -59,7 +55,15 @@ export default function CreateTicket() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSelectChange = (e: SelectChangeEvent) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -90,7 +94,7 @@ export default function CreateTicket() {
                   name="subject"
                   label={t('tickets.fields.subject')}
                   value={formData.subject}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   disabled={loading}
                 />
               </Grid>
@@ -101,7 +105,7 @@ export default function CreateTicket() {
                   <Select
                     name="priority"
                     value={formData.priority}
-                    onChange={handleChange}
+                    onChange={handleSelectChange}
                     label={t('tickets.fields.priority')}
                     disabled={loading}
                   >
@@ -122,7 +126,7 @@ export default function CreateTicket() {
                   name="message"
                   label={t('tickets.fields.message')}
                   value={formData.message}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   disabled={loading}
                   placeholder={t('tickets.messagePlaceholder')}
                 />
