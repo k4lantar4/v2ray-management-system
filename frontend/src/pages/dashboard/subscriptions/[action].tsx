@@ -13,7 +13,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Autocomplete from '@mui/material/Autocomplete';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import DatePicker from '@mui/x-date-pickers/DatePicker';
 import { useTranslations } from 'next-intl';
 import { useSnackbar } from 'notistack';
 import Layout from '../../../components/layout/Layout';
@@ -216,13 +216,13 @@ export default function SubscriptionForm() {
                 <DatePicker
                   label={t('subscriptions.fields.startDate')}
                   value={new Date(formData.start_date)}
-                  onChange={(date) =>
+                  onChange={(date: Date | null) =>
                     setFormData(prev => ({
                       ...prev,
                       start_date: date?.toISOString() || new Date().toISOString(),
                     }))
                   }
-                  renderInput={(params) => <TextField {...params} />}
+                  renderInput={(params: any) => <TextField {...params} />}
                 />
               </Grid>
 
@@ -230,13 +230,13 @@ export default function SubscriptionForm() {
                 <DatePicker
                   label={t('subscriptions.fields.endDate')}
                   value={new Date(formData.end_date)}
-                  onChange={(date) =>
+                  onChange={(date: Date | null) =>
                     setFormData(prev => ({
                       ...prev,
                       end_date: date?.toISOString() || new Date().toISOString(),
                     }))
                   }
-                  renderInput={(params) => <TextField {...params} />}
+                  renderInput={(params: any) => <TextField {...params} />}
                 />
               </Grid>
 
