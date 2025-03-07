@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -15,6 +15,7 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LockIcon from '@mui/icons-material/Lock';
 import { useTranslations } from 'next-intl';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
   const t = useTranslations();
@@ -27,17 +28,29 @@ export default function Login() {
     password: '',
   });
 
+  const { login, error: authError, clearError } = useAuth();
+
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+    }
+    return () => {
+      clearError();
+    };
+  }, [authError, clearError]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      // TODO: Implement login API call
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      router.push('/dashboard');
-    } catch (err) {
-      setError(t('auth.invalidCredentials'));
+      // Call the login API through the auth context
+      const { phone, password } = formData;
+      await login(phone, password);
+      // No need to navigate, AuthContext will handle it
+    } catch (err: any) {
+      // Error is handled by the AuthContext and useEffect above
     } finally {
       setLoading(false);
     }

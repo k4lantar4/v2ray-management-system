@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import logging
+import asyncio
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -10,6 +11,7 @@ from .api.endpoints import (
     tickets, servers, admin, admin_backup
 )
 from .services.backup import backup_service
+from .bot.telegram_bot import start_bot, stop_bot
 from .core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -107,6 +109,14 @@ async def startup_event():
     
     # Create initial backup directory
     backup_service.backup_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Start Telegram bot
+    try:
+        if settings.TELEGRAM_BOT_ENABLED:
+            logger.info("Starting Telegram bot...")
+            asyncio.create_task(start_bot())
+    except Exception as e:
+        logger.error(f"Failed to start Telegram bot: {str(e)}")
 
 # Shutdown event
 @app.on_event("shutdown")
@@ -122,5 +132,10 @@ async def shutdown_event():
             backup_date = datetime.strptime(backup["timestamp"], "%Y%m%d_%H%M%S")
             if backup_date < cutoff_date:
                 await backup_service.delete_backup(backup["path"])
+                
+        # Stop Telegram bot
+        if settings.TELEGRAM_BOT_ENABLED:
+            logger.info("Stopping Telegram bot...")
+            await stop_bot()
     except Exception as e:
         logger.error(f"Error during shutdown cleanup: {str(e)}")

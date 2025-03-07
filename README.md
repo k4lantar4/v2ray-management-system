@@ -25,7 +25,32 @@ A comprehensive management system for V2Ray with a modern web interface, Telegra
 
 ## Quick Installation
 
-The system comes with an automated installer that handles everything including:
+The system comes with two installation options:
+
+### 1. Easy Installer (Recommended for Non-Technical Users)
+
+Our user-friendly easy installer is designed for non-specialists who want a simple installation process:
+
+- Installs all prerequisites in order of importance
+- Handles errors gracefully with clear explanations
+- Provides a beautiful typography display upon completion
+- Guides you through the entire process with minimal technical knowledge required
+
+```bash
+git clone https://github.com/k4lantar4/v2ray-management-system.git && cd v2ray-management-system && chmod +x easy_installer.sh && sudo ./easy_installer.sh
+```
+
+Or if you've already cloned the repository:
+
+```bash
+chmod +x easy_installer.sh && sudo ./easy_installer.sh
+```
+
+For detailed instructions, see [EASY_INSTALL.md](EASY_INSTALL.md).
+
+### 2. Standard Installation
+
+The standard installer for users who prefer the traditional approach:
 
 - Docker and Docker Compose installation
 - SSL certificate setup with Let's Encrypt
@@ -33,8 +58,6 @@ The system comes with an automated installer that handles everything including:
 - Telegram bot webhook configuration
 - Environment configuration
 - Service deployment
-
-### One-Command Installation
 
 ```bash
 git clone https://github.com/k4lantar4/v2ray-management-system.git && cd v2ray-management-system && chmod +x install.sh && ./install.sh

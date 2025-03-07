@@ -1,30 +1,69 @@
 import logging
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, CallbackContext
+import asyncio
+from telegram import Update, Bot
+from telegram.ext import Application, CommandHandler, ContextTypes
+from ..core.config import settings
 
 # Initialize the bot
-updater = Updater("YOUR_TELEGRAM_BOT_TOKEN")
+bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
+application = None
 
 # Command to manage users
-def manage_users(update: Update, context: CallbackContext) -> None:
+async def manage_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Logic to manage users
-    update.message.reply_text("User management functionality here.")
+    await update.message.reply_text("User management functionality here.")
 
 # Command to manage subscriptions
-def manage_subscriptions(update: Update, context: CallbackContext) -> None:
+async def manage_subscriptions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Logic to manage subscriptions
-    update.message.reply_text("Subscription management functionality here.")
+    await update.message.reply_text("Subscription management functionality here.")
 
 # Command to manage payments
-def manage_payments(update: Update, context: CallbackContext) -> None:
+async def manage_payments(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Logic to manage payments
-    update.message.reply_text("Payment management functionality here.")
+    await update.message.reply_text("Payment management functionality here.")
 
-# Add command handlers
-updater.dispatcher.add_handler(CommandHandler("manage_users", manage_users))
-updater.dispatcher.add_handler(CommandHandler("manage_subscriptions", manage_subscriptions))
-updater.dispatcher.add_handler(CommandHandler("manage_payments", manage_payments))
+# Function to send messages to users
+async def send_message(chat_id: int, text: str) -> None:
+    """
+    Send a message to a specific chat ID.
+    
+    Args:
+        chat_id: The Telegram chat ID to send the message to
+        text: The message text to send
+    """
+    try:
+        await bot.send_message(chat_id=chat_id, text=text)
+        logging.info(f"Message sent to {chat_id}")
+    except Exception as e:
+        logging.error(f"Failed to send message to {chat_id}: {str(e)}")
+        raise
 
-# Start the bot
-updater.start_polling()
-updater.idle()
+# Function to initialize and start the bot
+async def start_bot():
+    """Initialize and start the Telegram bot."""
+    global application
+    
+    # Create application
+    application = Application.builder().token(settings.TELEGRAM_BOT_TOKEN).build()
+    
+    # Add command handlers
+    application.add_handler(CommandHandler("manage_users", manage_users))
+    application.add_handler(CommandHandler("manage_subscriptions", manage_subscriptions))
+    application.add_handler(CommandHandler("manage_payments", manage_payments))
+    
+    # Start the bot
+    await application.initialize()
+    await application.start()
+    
+    logging.info("Telegram bot started successfully")
+    
+    return application
+
+# Function to stop the bot
+async def stop_bot():
+    """Stop the Telegram bot."""
+    global application
+    if application:
+        await application.stop()
+        logging.info("Telegram bot stopped")

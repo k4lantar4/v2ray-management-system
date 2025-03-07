@@ -1,25 +1,25 @@
 # 🌟 Core Dependencies
-fastapi==0.109.2
-uvicorn==0.24.0
-python-telegram-bot==20.6
+fastapi==0.110.0
+uvicorn==0.27.1
+python-telegram-bot==20.8
 sqlmodel==0.0.20  # First version with pydantic 2.x support
-alembic==1.12.1
-pydantic==2.4.2
-python-dotenv==1.0.0
+alembic==1.13.1
+pydantic==2.6.1
+python-dotenv==1.0.1
 
 # 🔐 Security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.6
+python-multipart==0.0.9
 
 # 📊 Database
-sqlalchemy==2.0.23
+sqlalchemy==2.0.27
 asyncpg==0.29.0
 psycopg2-binary==2.9.9
 
 # 🚀 Async Support
-aiohttp==3.9.1
-httpx==0.25.1
+aiohttp==3.9.3
+httpx==0.27.0
 asyncio==3.4.3
 
 # 🔄 Background Tasks
@@ -30,23 +30,23 @@ flower==2.0.1
 # 📝 Logging & Monitoring
 loguru==0.7.2
 prometheus-client==0.19.0
-sentry-sdk==1.35.0
+sentry-sdk==1.40.4
 
 # 🧪 Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
+pytest==8.0.0
+pytest-asyncio==0.23.5
 pytest-cov==4.1.0
-httpx==0.25.1
+httpx==0.27.0
 
 # 🛠️ Development Tools
-black==23.11.0
-flake8==6.1.0
-isort==5.12.0
-mypy==1.7.0
+black==24.2.0
+flake8==7.0.0
+isort==5.13.2
+mypy==1.8.0
 
 # 📦 Additional Utilities
-python-slugify==8.0.1
-Pillow==10.1.0  # For image processing
+python-slugify==8.0.4
+Pillow==10.2.0  # For image processing
 aiofiles==23.2.1  # For async file operations
-ujson==5.8.0  # Fast JSON processing
-pytz==2023.3.post1  # Timezone support
+ujson==5.9.0  # Fast JSON processing
+pytz==2024.1  # Timezone support

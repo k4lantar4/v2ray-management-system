@@ -123,7 +123,11 @@ async def request_2fa(
         )
 
     code = SecurityUtils.generate_2fa_code(current_user.id)
-    # TODO: Send code via Telegram bot
+    from ...bot.telegram_bot import send_message
+    await send_message(
+        current_user.telegram_id,
+        f"Your 2FA verification code is: {code}\nThis code will expire in 10 minutes."
+    )
     return {"msg": "2FA code sent"}
 
 @router.post("/password-reset/request")
@@ -148,7 +152,11 @@ async def request_password_reset(
         )
 
     code = SecurityUtils.generate_2fa_code(user.id)
-    # TODO: Send code via Telegram bot
+    from ...bot.telegram_bot import send_message
+    await send_message(
+        user.telegram_id,
+        f"Your password reset code is: {code}\nThis code will expire in 10 minutes."
+    )
     return {"msg": "Reset code sent"}
 
 @router.post("/password-reset/verify")

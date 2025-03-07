@@ -13,10 +13,12 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useTranslations } from 'next-intl';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function Header() {
   const t = useTranslations();
   const router = useRouter();
+  const { logout } = useAuth();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -29,9 +31,9 @@ export default function Header() {
   };
 
   const handleLogout = async () => {
-    // TODO: Implement logout logic
     handleClose();
-    router.push('/login');
+    logout();
+    // No need to manually redirect as the logout function in AuthContext handles this
   };
 
   return (

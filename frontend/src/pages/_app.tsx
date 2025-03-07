@@ -8,7 +8,9 @@ import rtlPlugin from 'stylis-plugin-rtl';
 import { prefixer } from 'stylis';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { SnackbarProvider } from 'notistack';
+import { useTranslations } from 'next-intl';
 
+import { AuthProvider } from '../contexts/AuthContext';
 import theme from '../utils/theme';
 import faMessages from '../translations/fa.json';
 
@@ -49,7 +51,9 @@ export default function App({ Component, pageProps }: AppProps) {
             }}
             autoHideDuration={3000}
           >
-            <Component {...pageProps} />
+            <AuthProvider>
+              <Component {...pageProps} />
+            </AuthProvider>
           </SnackbarProvider>
         </ThemeProvider>
       </QueryClientProvider>

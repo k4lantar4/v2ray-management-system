@@ -16,6 +16,7 @@ import StorageIcon from '@mui/icons-material/Storage';
 import PaymentIcon from '@mui/icons-material/Payment';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import { useTranslations } from 'next-intl';
+import { useAuth } from '../../contexts/AuthContext';
 
 // نقش‌های کاربری و دسترسی‌های مربوطه
 const roleAccess = {
@@ -89,8 +90,8 @@ const menuItems = [
 export default function Sidebar() {
   const t = useTranslations();
   const router = useRouter();
-  // TODO: Get user role from auth context
-  const userRole = 'ADMIN';
+  const { user } = useAuth();
+  const userRole = user?.role || 'USER'; // Default to USER if not authenticated
 
   // فیلتر کردن آیتم‌های منو بر اساس نقش کاربر
   const filteredMenuItems = menuItems.filter((item) =>

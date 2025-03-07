@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { authService } from '@/services/api';
+import { authService } from '../services/api';
 
 interface User {
   id: number;

@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import styled from '@emotion/styled';
+import styled from '@emotion/styled'; // Updated import statement
 import { Theme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';

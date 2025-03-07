@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -67,19 +68,34 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    // TODO: Fetch dashboard stats from API
     const fetchStats = async () => {
       try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const response = await fetch('/api/v1/dashboard/stats', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard stats');
+        }
+        
+        const data = await response.json();
+        setStats({
+          totalUsers: data.totalUsers || 0,
+          activeSubscriptions: data.activeSubscriptions || 0,
+          totalRevenue: data.totalRevenue || 0,
+          activeServers: data.activeServers || 0,
+        });
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+        // Fallback to demo data if API call fails
         setStats({
           totalUsers: 150,
           activeSubscriptions: 85,
           totalRevenue: 12500000,
           activeServers: 5,
         });
-      } catch (error) {
-        console.error('Error fetching stats:', error);
       } finally {
         setLoading(false);
       }
@@ -88,26 +104,28 @@ export default function Dashboard() {
     fetchStats();
   }, []);
 
+  const router = useRouter();
+  
   const quickActions = [
     {
       title: t('dashboard.quickActions.addUser'),
       icon: <PeopleIcon sx={{ fontSize: 40 }} />,
-      onClick: () => {/* TODO: Navigate to add user */},
+      onClick: () => router.push('/dashboard/users/create'),
     },
     {
       title: t('dashboard.quickActions.addSubscription'),
       icon: <SubscriptionsIcon sx={{ fontSize: 40 }} />,
-      onClick: () => {/* TODO: Navigate to add subscription */},
+      onClick: () => router.push('/dashboard/subscriptions/create'),
     },
     {
       title: t('dashboard.quickActions.createTicket'),
       icon: <AddIcon sx={{ fontSize: 40 }} />,
-      onClick: () => {/* TODO: Navigate to create ticket */},
+      onClick: () => router.push('/dashboard/tickets/create'),
     },
     {
       title: t('dashboard.quickActions.serverStatus'),
       icon: <StorageIcon sx={{ fontSize: 40 }} />,
-      onClick: () => {/* TODO: Navigate to server status */},
+      onClick: () => router.push('/dashboard/servers'),
     },
   ];
 

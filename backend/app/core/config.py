@@ -1,5 +1,7 @@
+import base64
 from typing import List, Optional
-from pydantic import BaseSettings, AnyHttpUrl, validator
+from pydantic import AnyHttpUrl, validator
+from pydantic_settings import BaseSettings
 from datetime import timedelta
 
 class Settings(BaseSettings):
@@ -40,6 +42,7 @@ class Settings(BaseSettings):
     # Telegram Bot
     TELEGRAM_BOT_TOKEN: str
     TELEGRAM_CHAT_ID: Optional[str] = None
+    TELEGRAM_BOT_ENABLED: bool = True
     
     # Server Metrics
     METRICS_RETENTION_DAYS: int = 30

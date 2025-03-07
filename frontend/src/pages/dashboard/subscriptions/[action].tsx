@@ -222,7 +222,9 @@ export default function SubscriptionForm() {
                       start_date: date?.toISOString() || new Date().toISOString(),
                     }))
                   }
+                  renderInput={(params) => <TextField {...params} />}
                 />
+
               </Grid>
 
               <Grid item xs={12} md={6}>
@@ -235,7 +237,9 @@ export default function SubscriptionForm() {
                       end_date: date?.toISOString() || new Date().toISOString(),
                     }))
                   }
+                  renderInput={(params) => <TextField {...params} />}
                 />
+
               </Grid>
 
               <Grid item xs={12} md={6}>
