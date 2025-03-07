@@ -5,7 +5,8 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: docker/Dockerfile.bot
+      dockerfile: Dockerfile
+
     ports:
       - "3000:3000"
     environment:
