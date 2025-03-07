@@ -11,6 +11,11 @@ ENV PYTHONUNBUFFERED=1
 COPY requirements.txt .
 RUN python -m pip install -r requirements.txt
 
+# Install npm dependencies with legacy-peer-deps flag
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm install --legacy-peer-deps
+
 WORKDIR /app
 COPY . /app
 
