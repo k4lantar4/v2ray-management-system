@@ -13,7 +13,8 @@ import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Autocomplete from '@mui/material/Autocomplete';
-import DatePicker from '@mui/x-date-pickers/DatePicker';
+import { DatePicker } from '@mui/x-date-pickers';
+
 import { useTranslations } from 'next-intl';
 import { useSnackbar } from 'notistack';
 import Layout from '../../../components/layout/Layout';
