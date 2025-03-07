@@ -29,9 +29,9 @@ display_header() {
         padding_right=$((padding + 1))
     fi
     
-    echo -e "\n${BOLD}${BLUE}╔═${"═"*$width}═╗${NC}"
+    echo -e "\n${BOLD}${BLUE}╔═${"═"*\$width}═╗${NC}"
     echo -e "${BOLD}${BLUE}║${WHITE} ${text}${BLUE} $(printf '%*s' $padding_right '')║${NC}"
-    echo -e "${BOLD}${BLUE}╚═${"═"*$width}═╝${NC}\n"
+    echo -e "${BOLD}${BLUE}╚═${"═"*\$width}═╝${NC}\n"
 }
 
 # Function to display step information
