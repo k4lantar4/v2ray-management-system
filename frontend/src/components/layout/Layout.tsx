@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import styled from '@emotion/styled';
-import { Theme } from '@mui/material';
+import { Theme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
 import Drawer from '@mui/material/Drawer';
@@ -20,21 +20,13 @@ interface MainProps {
   open?: boolean;
 }
 
-const Main = styled('main', {
-  shouldForwardProp: (prop: string): boolean => prop !== 'open',
-})<MainProps>(({ theme, open }) => ({
+const Main = styled('main')<MainProps>(({ open }) => ({
   flexGrow: 1,
-  padding: (theme as Theme).spacing(3),
-  transition: (theme as Theme).transitions.create('margin', {
-    easing: (theme as Theme).transitions.easing.sharp,
-    duration: (theme as Theme).transitions.duration.leavingScreen,
-  }),
+  padding: '24px',
+  transition: 'margin 225ms cubic-bezier(0.4, 0, 0.6, 1) 0ms',
   marginRight: -drawerWidth,
   ...(open && {
-    transition: (theme as Theme).transitions.create('margin', {
-      easing: (theme as Theme).transitions.easing.easeOut,
-      duration: (theme as Theme).transitions.duration.enteringScreen,
-    }),
+    transition: 'margin 225ms cubic-bezier(0.0, 0, 0.2, 1) 0ms',
     marginRight: 0,
   }),
 }));
@@ -59,11 +51,7 @@ export default function Layout({ children, title = 'داشبورد' }: LayoutPro
         sx={{
           width: open ? `calc(100% - ${drawerWidth}px)` : '100%',
           mr: open ? `${drawerWidth}px` : 0,
-          transition: (theme: Theme) =>
-            theme.transitions.create(['margin', 'width'], {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.leavingScreen,
-            }),
+          transition: 'margin 225ms cubic-bezier(0.4, 0, 0.6, 1) 0ms, width 225ms cubic-bezier(0.4, 0, 0.6, 1) 0ms'
         }}
       >
         <Toolbar>
