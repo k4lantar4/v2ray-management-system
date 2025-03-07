@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   # 🎨 Frontend Service
   frontend:
@@ -8,172 +10,32 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://api:8000/api/v1
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
-    depends_on:
-      - api
-    networks:
-      - v2ray_net
-    restart: unless-stopped
+      - POSTGRES_USER=your_username
+      - POSTGRES_PASSWORD=your_password
+      - POSTGRES_DB=your_database
 
-  # 🤖 Telegram Bot Service
-  bot:
+  # 🐳 Backend Service
+  backend:
     build:
-      context: .
-      dockerfile: docker/Dockerfile.bot
-    volumes:
-      - ./backend:/app/backend
-      - ./receipts:/app/receipts
-    env_file:
-      - .env
-    depends_on:
-      - db
-      - redis
-      - api
-    restart: unless-stopped
-    networks:
-      - v2ray_net
-
-  # 🚀 FastAPI Backend Service
-  api:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.backend
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend:/app/backend
-    env_file:
-      - .env
-    depends_on:
-      - db
-      - redis
-    restart: unless-stopped
-    networks:
-      - v2ray_net
+    environment:
+      - NODE_ENV=production
+      - POSTGRES_USER=your_username
+      - POSTGRES_PASSWORD=your_password
+      - POSTGRES_DB=your_database
 
-  # 🗄️ PostgreSQL Database
+  # 🐳 Database Service
   db:
-    image: postgres:13-alpine
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    image: postgres:latest
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - v2ray_net
-
-  # 📊 Redis for Caching and Celery
-  redis:
-    image: redis:6-alpine
-    ports:
-      - "6379:6379"
+      - POSTGRES_USER=your_username
+      - POSTGRES_PASSWORD=your_password
+      - POSTGRES_DB=your_database
     volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - v2ray_net
-
-  # 🔄 Celery Worker
-  celery_worker:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.backend
-    command: celery -A backend.app.tasks.celery worker --loglevel=info
-    volumes:
-      - ./backend:/app/backend
-    env_file:
-      - .env
-    depends_on:
-      - redis
-      - db
-    networks:
-      - v2ray_net
-
-  # ⏰ Celery Beat
-  celery_beat:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.backend
-    command: celery -A backend.app.tasks.celery beat --loglevel=info
-    volumes:
-      - ./backend:/app/backend
-    env_file:
-      - .env
-    depends_on:
-      - redis
-      - db
-    networks:
-      - v2ray_net
-
-  # 🌸 Flower - Celery Monitoring
-  flower:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.backend
-    command: celery -A backend.app.tasks.celery flower --port=5555
-    ports:
-      - "5555:5555"
-    env_file:
-      - .env
-    depends_on:
-      - redis
-      - celery_worker
-    networks:
-      - v2ray_net
-
-  # 📊 Prometheus - Metrics Collection
-  prometheus:
-    image: prom/prometheus:latest
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    ports:
-      - "9090:9090"
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-    networks:
-      - v2ray_net
-
-  # 📈 Grafana - Metrics Visualization
-  grafana:
-    image: grafana/grafana:latest
-    volumes:
-      - grafana_data:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
-    ports:
-      - "3000:3000"
-    depends_on:
-      - prometheus
-    networks:
-      - v2ray_net
+      - db_data:/var/lib/postgresql/data
 
 volumes:
-  postgres_data:
-  redis_data:
-  prometheus_data:
-  grafana_data:
-
-networks:
-  v2ray_net:
-    driver: bridge
+  db_data:
