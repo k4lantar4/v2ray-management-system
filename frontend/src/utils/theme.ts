@@ -1,6 +1,4 @@
-import { createTheme } from '@mui/material/styles'; // Reverted import statement
-
-
+import { createTheme } from '@mui/system';
 import { faIR } from '@mui/material/locale';
 
 declare module '@mui/material/styles' {
