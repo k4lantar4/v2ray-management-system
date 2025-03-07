@@ -13,7 +13,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Autocomplete from '@mui/material/Autocomplete';
-import DatePicker from '@mui/x-date-pickers/DatePicker';
+import { DatePicker } from '@mui/x-date-pickers';
 import { parseISO, isAfter, startOfDay } from 'date-fns';
 
 import { useTranslations } from 'next-intl';
