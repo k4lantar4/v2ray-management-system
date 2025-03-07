@@ -224,7 +224,6 @@ export default function SubscriptionForm() {
                   }
                   renderInput={(params) => <TextField {...params} />}
                 />
-
               </Grid>
 
               <Grid item xs={12} md={6}>
@@ -239,7 +238,6 @@ export default function SubscriptionForm() {
                   }
                   renderInput={(params) => <TextField {...params} />}
                 />
-
               </Grid>
 
               <Grid item xs={12} md={6}>
