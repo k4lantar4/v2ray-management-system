@@ -118,8 +118,22 @@ install_system_dependencies() {
     systemctl enable docker || handle_error "Failed to enable Docker" "فعال‌سازی Docker با خطا مواجه شد"
     systemctl start docker || handle_error "Failed to start Docker" "راه‌اندازی Docker با خطا مواجه شد"
     
-    # Add current user to docker group
-    usermod -aG docker $SUDO_USER || handle_error "Failed to add user to docker group" "افزودن کاربر به گروه docker با خطا مواجه شد"
+    # Create docker group if it doesn't exist
+    if ! getent group docker > /dev/null; then
+        groupadd docker || handle_error "Failed to create docker group" "ایجاد گروه docker با خطا مواجه شد"
+    fi
+    
+    # Add current user to docker group with proper error handling
+    if [ -n "$SUDO_USER" ]; then
+        if ! id -nG "$SUDO_USER" | grep -qw "docker"; then
+            usermod -aG docker "$SUDO_USER" || handle_error "Failed to add user to docker group" "افزودن کاربر به گروه docker با خطا مواجه شد"
+            print_message "Added $SUDO_USER to docker group" "کاربر $SUDO_USER به گروه docker اضافه شد"
+        else
+            print_message "User $SUDO_USER is already in docker group" "کاربر $SUDO_USER قبلاً در گروه docker قرار دارد"
+        fi
+    else
+        handle_error "SUDO_USER is not set" "متغیر SUDO_USER تنظیم نشده است"
+    fi
     
     # Install latest Node.js using n
     npm install -g n || handle_error "Failed to install n" "نصب n با خطا مواجه شد"
