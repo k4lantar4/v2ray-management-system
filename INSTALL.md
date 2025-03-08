@@ -16,7 +16,7 @@ Before installing the V2Ray Management System, ensure your system meets the foll
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/k4lantar4/v2ray-management-system.git && cd v2ray-management-system && chmod -x ./install.sh && cp .env.example .env ./install.sh
+   git clone https://github.com/k4lantar4/v2ray-management-system.git && cd v2ray-management-system && chmod -x ./install.sh && cp .env.example .env && ./install.sh
    
    ```
 
