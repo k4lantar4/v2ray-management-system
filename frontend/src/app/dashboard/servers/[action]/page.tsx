@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/components/ui/use-toast";
+import { useServerStore } from "@/store";
+import { Server, CreateServerDto, UpdateServerDto } from "@/types/api";
 
 const serverFormSchema = z.object({
   name: z.string().min(1, "نام سرور الزامی است"),
@@ -53,7 +55,8 @@ type ServerFormValues = z.infer<typeof serverFormSchema>;
 
 interface ServerFormPageProps {
   params: {
-    action: "new" | string;
+    action: "new" | "edit";
+    id?: string;
   };
 }
 
@@ -61,7 +64,8 @@ export default function ServerFormPage({ params }: ServerFormPageProps) {
   const { action } = params;
   const router = useRouter();
   const { toast } = useToast();
-  const isEditing = action !== "new";
+  const isEditing = action === "edit";
+  const serverStore = useServerStore();
 
   const form = useForm<ServerFormValues>({
     resolver: zodResolver(serverFormSchema),
@@ -76,16 +80,51 @@ export default function ServerFormPage({ params }: ServerFormPageProps) {
   });
 
   useEffect(() => {
-    if (isEditing) {
-      // TODO: Fetch server data and set form values
+    if (isEditing && params.id) {
+      const fetchServer = async () => {
+        try {
+          await serverStore.getServer(parseInt(params.id!, 10));
+          const server = serverStore.selectedServer;
+          if (server) {
+            form.reset({
+              name: server.name,
+              location: server.location,
+              ip: server.ip,
+              portRangeStart: server.portRangeStart.toString(),
+              portRangeEnd: server.portRangeEnd.toString(),
+              status: server.status as "online" | "offline" | "maintenance",
+            });
+          }
+        } catch (error) {
+          toast({
+            variant: "destructive",
+            title: "خطا",
+            description: "مشکلی در دریافت اطلاعات سرور پیش آمده است.",
+          });
+          router.push("/dashboard/servers");
+        }
+      };
+      fetchServer();
     }
-  }, [isEditing]);
+  }, [isEditing, params.id, form, serverStore, toast, router]);
 
   const onSubmit = async (data: ServerFormValues) => {
     try {
-      // TODO: Implement server creation/update
-      console.log("Form data:", data);
-      
+      const serverData: CreateServerDto | UpdateServerDto = {
+        name: data.name,
+        location: data.location,
+        ip: data.ip,
+        portRangeStart: parseInt(data.portRangeStart.toString(), 10),
+        portRangeEnd: parseInt(data.portRangeEnd.toString(), 10),
+        status: data.status,
+      };
+
+      if (isEditing && params.id) {
+        await serverStore.updateServer(parseInt(params.id, 10), serverData);
+      } else {
+        await serverStore.createServer(serverData as CreateServerDto);
+      }
+
       toast({
         title: isEditing ? "سرور ویرایش شد" : "سرور جدید ایجاد شد",
         description: `سرور ${data.name} با موفقیت ${
