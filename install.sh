@@ -182,7 +182,7 @@ JWT_SECRET=$JWT_SECRET
 EOL
 }
 
-# Function to setup SSL with timeout
+# Function to setup SSL with timeout and proper error handling
 setup_ssl() {
     if is_step_completed "ssl_setup"; then
         print_message "SSL already configured." "SSL قبلاً پیکربندی شده است."
@@ -191,17 +191,24 @@ setup_ssl() {
 
     print_message "Setting up SSL certificate..." "در حال راه‌اندازی گواهی SSL..."
     
-    # Configure Nginx with error handling
-    if ! nginx -t; then
-        handle_error "Invalid Nginx configuration" "تنظیمات Nginx نامعتبر است"
-    fi
+    # Ensure the sites-available directory exists
+    mkdir -p /etc/nginx/sites-available
+    mkdir -p /etc/nginx/sites-enabled
+
+    # Remove any existing configuration for this domain
+    rm -f "/etc/nginx/sites-available/${DOMAIN}.conf"
+    rm -f "/etc/nginx/sites-enabled/${DOMAIN}.conf"
     
-    # Configure Nginx
-    cat > /etc/nginx/sites-available/$DOMAIN << EOL
+    # Configure Nginx for initial HTTP setup
+    cat > "/etc/nginx/sites-available/${DOMAIN}.conf" << EOL
 server {
     listen 80;
-    server_name $DOMAIN;
+    listen [::]:80;
+    server_name ${DOMAIN};
     
+    root /var/www/html;
+    index index.html;
+
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
@@ -219,17 +226,119 @@ server {
         proxy_set_header Host \$host;
         proxy_cache_bypass \$http_upgrade;
     }
+
+    location ~ /.well-known/acme-challenge {
+        allow all;
+        root /var/www/html;
+    }
 }
 EOL
 
-    ln -sf /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/
-    nginx -t && systemctl restart nginx
+    # Create symbolic link
+    ln -sf "/etc/nginx/sites-available/${DOMAIN}.conf" "/etc/nginx/sites-enabled/${DOMAIN}.conf"
 
-    # Get SSL certificate with timeout
-    timeout 300 certbot --nginx -d $DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN || \
-        handle_error "SSL certificate generation failed" "تولید گواهی SSL با خطا مواجه شد"
+    # Verify Nginx configuration
+    if ! nginx -t; then
+        handle_error "Invalid Nginx configuration" "تنظیمات Nginx نامعتبر است"
+    fi
+
+    # Restart Nginx to apply changes
+    systemctl restart nginx || handle_error "Failed to restart Nginx" "راه‌اندازی مجدد Nginx با خطا مواجه شد"
+
+    # Create webroot directory if it doesn't exist
+    mkdir -p /var/www/html
+
+    # Stop Nginx before running Certbot
+    systemctl stop nginx
+
+    print_message "Obtaining SSL certificate..." "در حال دریافت گواهی SSL..."
     
+    # Run Certbot with proper error handling and timeout
+    if ! timeout 300 certbot certonly --standalone \
+        --non-interactive \
+        --agree-tos \
+        --email "admin@${DOMAIN}" \
+        --domains "${DOMAIN}" \
+        --preferred-challenges http; then
+        handle_error "SSL certificate generation failed. Please check your domain configuration." "تولید گواهی SSL با خطا مواجه شد. لطفاً تنظیمات دامنه را بررسی کنید."
+    fi
+
+    # Update Nginx configuration with SSL
+    cat > "/etc/nginx/sites-available/${DOMAIN}.conf" << EOL
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN};
+    return 301 https://\$server_name\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${DOMAIN};
+
+    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_trusted_certificate /etc/letsencrypt/live/${DOMAIN}/chain.pem;
+
+    # SSL configuration
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_tickets off;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+
+    # HSTS
+    add_header Strict-Transport-Security "max-age=63072000" always;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+    
+    location /api {
+        proxy_pass http://localhost:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # SSL cert renewal
+    location ~ /.well-known/acme-challenge {
+        allow all;
+        root /var/www/html;
+    }
+}
+EOL
+
+    # Start Nginx
+    systemctl start nginx || handle_error "Failed to start Nginx" "راه‌اندازی Nginx با خطا مواجه شد"
+
+    # Verify Nginx is running
+    if ! systemctl is-active --quiet nginx; then
+        handle_error "Nginx is not running" "Nginx در حال اجرا نیست"
+    fi
+
+    # Add certbot renewal cron job
+    if ! crontab -l | grep -q "certbot renew"; then
+        (crontab -l 2>/dev/null; echo "0 3 * * * /usr/bin/certbot renew --quiet --post-hook \"systemctl reload nginx\"") | crontab -
+    fi
+
     mark_step_completed "ssl_setup"
+    print_message "SSL certificate installed successfully!" "گواهی SSL با موفقیت نصب شد!"
 }
 
 # Function to setup Telegram webhook with retry
