@@ -1,59 +1,100 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useEffect, useState } from 'react';
+import { useUserStore } from '@/store';
+import { UserTable } from '@/components/users/UserTable';
+import { AddCreditDialog } from '@/components/users/AddCreditDialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { UsersList } from "@/components/users/users-list";
-import { Icons } from "@/components/icons";
+} from '@/components/ui/select';
+import { Status } from '@/types/api';
+import { Loader2 } from 'lucide-react';
 
 export default function UsersPage() {
-  const router = useRouter();
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const { users, total, page, limit, isLoading, error, getUsers } = useUserStore();
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<Status | ''>('');
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+
+  useEffect(() => {
+    loadUsers();
+  }, [page, limit, search, status]);
+
+  const loadUsers = () => {
+    getUsers({
+      page,
+      limit,
+      search: search || undefined,
+      status: (status as Status) || undefined,
+    });
+  };
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatus(value as Status | '');
+  };
+
+  const handleAddCredit = (userId: number) => {
+    setSelectedUserId(userId);
+  };
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-red-500">Error: {error}</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-4 p-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">مدیریت کاربران</h1>
-        <Button onClick={() => router.push("/dashboard/users/new")}>
-          <Icons.plus className="ml-2 h-4 w-4" />
-          افزودن کاربر جدید
-        </Button>
+        <h1 className="text-2xl font-bold">Users</h1>
+        <Button>Add User</Button>
       </div>
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-1 items-center gap-4">
-          <div className="w-full max-w-[300px]">
-            <Input
-              placeholder="جستجو در کاربران..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="وضعیت" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">همه</SelectItem>
-              <SelectItem value="active">فعال</SelectItem>
-              <SelectItem value="inactive">غیرفعال</SelectItem>
-              <SelectItem value="blocked">مسدود شده</SelectItem>
-            </SelectContent>
-          </Select>
+      <div className="flex items-center space-x-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search users..."
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+          />
         </div>
+        <Select value={status} onValueChange={handleStatusChange}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="blocked">Blocked</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      <UsersList search={search} statusFilter={statusFilter} />
+      {isLoading ? (
+        <div className="flex h-96 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      ) : (
+        <UserTable users={users} onAddCredit={handleAddCredit} />
+      )}
+
+      <AddCreditDialog
+        userId={selectedUserId}
+        onClose={() => setSelectedUserId(null)}
+      />
     </div>
   );
 } 
