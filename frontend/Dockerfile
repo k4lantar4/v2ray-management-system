@@ -5,22 +5,21 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN npm ci --production=false
+# Install dependencies with exact versions
+RUN npm ci --production=false --legacy-peer-deps
 
 # Stage 2: Building the application
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy all files
+# Copy all files first to ensure proper module resolution
 COPY . .
-
-# Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
 # Set environment variables
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV production
+ENV NEXT_PUBLIC_APP_URL http://localhost:3000
 
 # Build the application
 RUN npm run build
@@ -31,10 +30,17 @@ WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_PUBLIC_APP_URL http://localhost:3000
 
 # Don't run production as root
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+
+# Set the correct permission for prerender cache
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
+# Switch to non-root user
 USER nextjs
 
 # Copy necessary files from builder
