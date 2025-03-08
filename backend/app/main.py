@@ -13,6 +13,8 @@ from .api.endpoints import (
 from .services.backup import backup_service
 from .bot.telegram_bot import start_bot, stop_bot
 from .core.config import settings
+import uuid
+import redis
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +57,32 @@ app.add_middleware(SecurityHeadersMiddleware)
 # Add rate limiting middleware
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
-    await rate_limiter(request)
-    return await call_next(request)
+    client_ip = request.client.host
+    route_key = request.url.path
+    
+    # Skip rate limiting for certain paths
+    if route_key.startswith("/static/") or route_key.startswith("/api/health"):
+        return await call_next(request)
+    
+    redis_key = f"rate_limit:{client_ip}:{route_key}"
+    
+    async with redis.Redis() as redis_client:
+        requests = await redis_client.incr(redis_key)
+        if requests == 1:
+            await redis_client.expire(redis_key, 60)  # 1 minute window
+        
+        if requests > 100:  # 100 requests per minute limit
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "detail": "Too many requests. Please try again later.",
+                    "status_code": 429,
+                    "retry_after": 60
+                }
+            )
+    
+    response = await call_next(request)
+    return response
 
 # Health check endpoint
 @app.get("/health")
@@ -81,23 +107,30 @@ app.include_router(admin_backup.router, prefix="/api/v1/admin", tags=["System Ba
 # Exception handlers
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
+    logger.error(f"HTTP Exception: {exc.detail} - Status: {exc.status_code} - Path: {request.url.path}")
     return JSONResponse(
         status_code=exc.status_code,
         content={
             "detail": exc.detail,
             "status_code": exc.status_code,
+            "path": request.url.path,
+            "method": request.method,
             "timestamp": datetime.utcnow().isoformat()
         }
     )
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled Exception: {str(exc)} - Path: {request.url.path}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content={
-            "detail": "Internal server error",
+            "detail": "Internal server error occurred. Please try again later.",
             "status_code": 500,
-            "timestamp": datetime.utcnow().isoformat()
+            "path": request.url.path,
+            "method": request.method,
+            "timestamp": datetime.utcnow().isoformat(),
+            "error_id": str(uuid.uuid4())  # For tracking in logs
         }
     )
 

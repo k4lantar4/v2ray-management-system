@@ -1,8 +1,12 @@
+"""
+Subscription model for user subscriptions
+"""
+
 from typing import Optional, List, ForwardRef
 from sqlmodel import Field, SQLModel, Relationship
 from datetime import datetime
 from enum import Enum
-from .base import BaseModel
+from .base import BaseModel, TimestampModel
 
 class SubscriptionStatus(str, Enum):
     ACTIVE = "active"
@@ -11,52 +15,74 @@ class SubscriptionStatus(str, Enum):
     PENDING = "pending"
 
 class SubscriptionBase(SQLModel):
-    user_id: Optional[int] = Field(default=None, foreign_key="user.id")
-    server_id: Optional[int] = Field(default=None, foreign_key="server.id")
-    start_date: datetime = Field(default_factory=datetime.utcnow)
-    end_date: datetime
-    data_limit: int  # in GB
-    data_used: int = Field(default=0)  # in GB
-    status: SubscriptionStatus = Field(default=SubscriptionStatus.PENDING)
-    auto_renew: bool = Field(default=False)
-    price: float
-    config_data: Optional[str] = Field(default=None)  # VPN configuration data
-    xui_uuid: Optional[str] = Field(default=None, unique=True)  # 3x-ui UUID
+    """Base Subscription model"""
+    user_id: int = Field(foreign_key="user.id")
+    server_id: int = Field(foreign_key="server.id")
+    plan_id: int = Field(foreign_key="plan.id")
+    name: str = Field(max_length=64)
+    status: str = Field(default="active")  # active, expired, suspended
+    expire_date: datetime
+    total_traffic: int  # In GB
+    used_traffic: int = Field(default=0)  # In GB
+    upload: int = Field(default=0)  # In bytes
+    download: int = Field(default=0)  # In bytes
+    settings: dict = Field(default_factory=dict)  # V2Ray specific settings
 
-class Subscription(BaseModel, SubscriptionBase, table=True):
+class Subscription(SubscriptionBase, TimestampModel, table=True):
     """Subscription model with relationships"""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    
+    # Relationships
     user: "User" = Relationship(back_populates="subscriptions")
     server: "Server" = Relationship(back_populates="subscriptions")
-    payments: List["Payment"] = Relationship(back_populates="subscription")
+    plan: "Plan" = Relationship(back_populates="subscriptions")
+    
+    @property
+    def remaining_traffic(self) -> int:
+        """Calculate remaining traffic in GB"""
+        return max(0, self.total_traffic - self.used_traffic)
+    
+    @property
+    def is_expired(self) -> bool:
+        """Check if subscription is expired"""
+        return datetime.utcnow() > self.expire_date
+    
+    @property
+    def is_traffic_finished(self) -> bool:
+        """Check if traffic is finished"""
+        return self.used_traffic >= self.total_traffic
+    
+    @property
+    def is_active(self) -> bool:
+        """Check if subscription is active"""
+        return (
+            self.status == "active"
+            and not self.is_expired
+            and not self.is_traffic_finished
+        )
 
-    class Config:
-        arbitrary_types_allowed = True
-
-class SubscriptionCreate(SQLModel):
-    """Schema for subscription creation"""
-    server_id: int
-    duration_months: int  # Will be used to calculate end_date
-    data_limit: int
-    auto_renew: Optional[bool] = False
-    price: float
+class SubscriptionCreate(SubscriptionBase):
+    """Subscription creation schema"""
+    pass
 
 class SubscriptionUpdate(SQLModel):
-    """Schema for subscription update"""
-    end_date: Optional[datetime] = None
-    data_limit: Optional[int] = None
-    status: Optional[SubscriptionStatus] = None
-    auto_renew: Optional[bool] = None
-    data_used: Optional[int] = None
-    config_data: Optional[str] = None
+    """Subscription update schema"""
+    name: Optional[str] = None
+    status: Optional[str] = None
+    expire_date: Optional[datetime] = None
+    total_traffic: Optional[int] = None
+    used_traffic: Optional[int] = None
+    upload: Optional[int] = None
+    download: Optional[int] = None
+    settings: Optional[dict] = None
 
 class SubscriptionRead(SubscriptionBase):
-    """Schema for reading subscription data"""
+    """Subscription read schema"""
     id: int
     created_at: datetime
-    server: "ServerRead"
-
-    class Config:
-        orm_mode = True
+    updated_at: datetime
+    remaining_traffic: int
+    is_active: bool
 
 # Prevent circular imports
 from .user import User

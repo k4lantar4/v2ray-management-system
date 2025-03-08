@@ -1,5 +1,6 @@
-import axios, { AxiosInstance } from 'axios';
-import { useRouter } from 'next/router';
+import axios from 'axios';
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { setupAxiosInterceptors } from './errorHandler';
 
 // تعریف interface های مورد نیاز
 interface LoginData {
@@ -29,34 +30,144 @@ interface Subscription {
   traffic_used: number;
 }
 
-// ایجاد نمونه axios با تنظیمات پایه
-const api: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+// Cache configuration
+interface CacheConfig {
+  ttl: number; // Time to live in milliseconds
+  maxSize: number; // Maximum number of items in cache
+}
 
-// افزودن interceptor برای مدیریت توکن
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+interface CacheItem<T> {
+  data: T;
+  timestamp: number;
+}
+
+export type ApiResponse<T> = {
+  data: T;
+  status: number;
+  message?: string;
+};
+
+export type ApiError = {
+  message: string;
+  status: number;
+  code?: string;
+};
+
+class ApiClient {
+  private static instance: ApiClient;
+  private client: AxiosInstance;
+  private cache: Map<string, { data: unknown; timestamp: number }>;
+  private readonly cacheDuration = 5 * 60 * 1000; // 5 minutes
+
+  private constructor() {
+    this.client = axios.create({
+      baseURL: process.env.NEXT_PUBLIC_API_URL,
+      timeout: 10000,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    this.cache = new Map();
+    this.setupInterceptors();
   }
-  return config;
-});
 
-// افزودن interceptor برای مدیریت خطاها
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+  public static getInstance(): ApiClient {
+    if (!ApiClient.instance) {
+      ApiClient.instance = new ApiClient();
     }
-    return Promise.reject(error);
+    return ApiClient.instance;
   }
-);
+
+  private setupInterceptors(): void {
+    setupAxiosInterceptors(this.client);
+
+    this.client.interceptors.request.use(
+      (config) => {
+        const token = localStorage.getItem('token');
+        if (token && config.headers) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+  }
+
+  private getCacheKey(config: AxiosRequestConfig): string {
+    return `${config.method}-${config.url}-${JSON.stringify(config.params || {})}-${JSON.stringify(config.data || {})}`;
+  }
+
+  private isCacheValid(timestamp: number): boolean {
+    return Date.now() - timestamp < this.cacheDuration;
+  }
+
+  private async request<T>(config: AxiosRequestConfig): Promise<T> {
+    const cacheKey = this.getCacheKey(config);
+
+    // Try to get from cache for GET requests
+    if (config.method?.toLowerCase() === 'get') {
+      const cached = this.cache.get(cacheKey);
+      if (cached && this.isCacheValid(cached.timestamp)) {
+        return cached.data as T;
+      }
+    }
+
+    try {
+      const response: AxiosResponse<ApiResponse<T>> = await this.client.request(config);
+      
+      // Cache GET responses
+      if (config.method?.toLowerCase() === 'get') {
+        this.cache.set(cacheKey, {
+          data: response.data.data,
+          timestamp: Date.now(),
+        });
+      }
+
+      return response.data.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  private handleError(error: unknown): Error {
+    if (axios.isAxiosError(error) && error.response) {
+      const apiError = error.response.data as ApiError;
+      return new Error(apiError.message || 'An error occurred');
+    }
+    return new Error('An unexpected error occurred');
+  }
+
+  public async get<T>(url: string, config?: Omit<AxiosRequestConfig, 'method' | 'url'>): Promise<T> {
+    return this.request<T>({ ...config, method: 'get', url });
+  }
+
+  public async post<T>(url: string, data?: unknown, config?: Omit<AxiosRequestConfig, 'method' | 'url' | 'data'>): Promise<T> {
+    return this.request<T>({ ...config, method: 'post', url, data });
+  }
+
+  public async put<T>(url: string, data?: unknown, config?: Omit<AxiosRequestConfig, 'method' | 'url' | 'data'>): Promise<T> {
+    return this.request<T>({ ...config, method: 'put', url, data });
+  }
+
+  public async delete<T>(url: string, config?: Omit<AxiosRequestConfig, 'method' | 'url'>): Promise<T> {
+    return this.request<T>({ ...config, method: 'delete', url });
+  }
+
+  public clearCache(): void {
+    this.cache.clear();
+  }
+
+  public invalidateCache(urlPattern: string): void {
+    for (const [key] of this.cache) {
+      if (key.includes(urlPattern)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+}
+
+export const api = ApiClient.getInstance();
 
 // سرویس‌های احراز هویت
 export const authService = {

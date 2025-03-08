@@ -1,7 +1,12 @@
+"""
+Server model for V2Ray servers
+"""
+
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
 from enum import Enum
-from .base import BaseModel
+from .base import BaseModel, TimestampModel
+from datetime import datetime
 
 class ServerLocation(str, Enum):
     GERMANY = "germany"
@@ -23,36 +28,29 @@ class ServerSyncStatus(str, Enum):
     FAILED = "failed"
 
 class ServerBase(SQLModel):
-    name: str = Field(index=True)
-    host: str  # IP or domain
-    port: int = Field(default=2053)
-    location: ServerLocation
-    status: ServerStatus = Field(default=ServerStatus.ACTIVE)
-    capacity: int  # Maximum number of users
-    current_users: int = Field(default=0)
-    bandwidth_limit: Optional[float] = Field(default=None)  # in Gbps
-    bandwidth_used: float = Field(default=0.0)  # in Gbps
-    xui_username: str
-    xui_password: str
-    xui_panel_url: str  # 3x-ui panel URL
-    description: Optional[str] = Field(default=None)
-    tags: Optional[str] = Field(default=None)  # Comma-separated tags
-    
-    # Cookie session management
-    xui_session_cookie: Optional[str] = Field(default=None)
-    xui_cookie_expiry: Optional[datetime] = Field(default=None)
-    
-    # Sync monitoring
-    last_sync: Optional[datetime] = Field(default=None)
-    sync_status: ServerSyncStatus = Field(default=ServerSyncStatus.PENDING)
-    sync_error: Optional[str] = Field(default=None)
-    failed_login_attempts: int = Field(default=0)
-    last_failed_login: Optional[datetime] = Field(default=None)
+    """Base Server model"""
+    name: str = Field(unique=True, index=True)
+    host: str = Field(index=True)
+    port: int = Field()
+    username: str
+    password: str
+    api_port: int = Field(default=8080)
+    is_active: bool = Field(default=True)
+    max_users: int = Field(default=500)
+    load: float = Field(default=0.0)
+    bandwidth_limit: Optional[int] = Field(default=None)  # In GB
+    notes: Optional[str] = Field(default=None)
 
-class Server(BaseModel, ServerBase, table=True):
+class Server(ServerBase, TimestampModel, table=True):
     """Server model with relationships"""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    
+    # Relationships
     subscriptions: List["Subscription"] = Relationship(back_populates="server")
-    metrics_history: List["ServerMetrics"] = Relationship(back_populates="server")
+    
+    class Config:
+        """Model configuration"""
+        arbitrary_types_allowed = True
 
     async def record_metrics(
         self,
@@ -164,34 +162,29 @@ class Server(BaseModel, ServerBase, table=True):
             self.status = ServerStatus.FULL
 
 class ServerCreate(ServerBase):
-    """Schema for server creation"""
+    """Server creation schema"""
     pass
 
 class ServerUpdate(SQLModel):
-    """Schema for server update"""
+    """Server update schema"""
     name: Optional[str] = None
     host: Optional[str] = None
     port: Optional[int] = None
-    location: Optional[ServerLocation] = None
-    status: Optional[ServerStatus] = None
-    capacity: Optional[int] = None
-    current_users: Optional[int] = None
-    bandwidth_limit: Optional[float] = None
-    bandwidth_used: Optional[float] = None
-    xui_username: Optional[str] = None
-    xui_password: Optional[str] = None
-    xui_panel_url: Optional[str] = None
-    description: Optional[str] = None
-    tags: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+    api_port: Optional[int] = None
+    is_active: Optional[bool] = None
+    max_users: Optional[int] = None
+    bandwidth_limit: Optional[int] = None
+    notes: Optional[str] = None
 
 class ServerRead(ServerBase):
-    """Schema for reading server data"""
+    """Server read schema"""
     id: int
-    load_percentage: float
-    is_available: bool
-
-    class Config:
-        orm_mode = True
+    created_at: datetime
+    updated_at: datetime
+    active_users: int = Field(default=0)
+    total_bandwidth: float = Field(default=0.0)  # In GB
 
 class PanelInfo(SQLModel):
     """Schema for 3x-ui panel information"""

@@ -1,8 +1,12 @@
+"""
+User model for the application
+"""
+
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
 from datetime import datetime
 from enum import Enum
-from .base import BaseModel
+from .base import BaseModel, TimestampModel
 from .backup import BackupMetadata
 from .activity_log import ActivityLog
 
@@ -18,21 +22,23 @@ class UserStatus(str, Enum):
     PENDING = "pending"
 
 class UserBase(SQLModel):
-    phone: str = Field(unique=True, index=True)
-    telegram_id: Optional[int] = Field(default=None, unique=True, index=True)
-    full_name: Optional[str] = Field(default=None)
-    role: UserRole = Field(default=UserRole.USER)
-    status: UserStatus = Field(default=UserStatus.PENDING)
-    wallet_balance: float = Field(default=0.0)
+    """Base User model"""
+    telegram_id: int = Field(unique=True, index=True)
+    username: Optional[str] = Field(default=None, max_length=32)
+    first_name: str = Field(max_length=64)
+    last_name: Optional[str] = Field(default=None, max_length=64)
+    credit: float = Field(default=0.0)
+    is_active: bool = Field(default=True)
+    is_banned: bool = Field(default=False)
     language: str = Field(default="fa")
 
-class User(BaseModel, UserBase, table=True):
-    """User model with all relationships"""
-    hashed_password: Optional[str] = Field(default=None)
-    last_login: Optional[datetime] = Field(default=None)
+class User(UserBase, TimestampModel, table=True):
+    """User model with relationships"""
+    id: Optional[int] = Field(default=None, primary_key=True)
     
     # Relationships
     subscriptions: List["Subscription"] = Relationship(back_populates="user")
+    transactions: List["Transaction"] = Relationship(back_populates="user")
     payments: List["Payment"] = Relationship(back_populates="user")
     tickets: List["Ticket"] = Relationship(back_populates="user")
     activities: List["ActivityLog"] = Relationship(back_populates="user")
@@ -45,32 +51,28 @@ class User(BaseModel, UserBase, table=True):
     )
 
     class Config:
+        """Model configuration"""
         arbitrary_types_allowed = True
 
 class UserCreate(UserBase):
-    """Schema for user creation"""
-    password: Optional[str] = None
+    """User creation schema"""
+    pass
 
 class UserUpdate(SQLModel):
-    """Schema for user update"""
-    phone: Optional[str] = None
-    full_name: Optional[str] = None
-    role: Optional[UserRole] = None
-    status: Optional[UserStatus] = None
-    wallet_balance: Optional[float] = None
+    """User update schema"""
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    credit: Optional[float] = None
+    is_active: Optional[bool] = None
+    is_banned: Optional[bool] = None
     language: Optional[str] = None
 
 class UserRead(UserBase):
-    """Schema for reading user data"""
+    """User read schema"""
     id: int
     created_at: datetime
-    last_login: Optional[datetime]
-    backup_count: Optional[int] = None
-    last_backup: Optional[datetime] = None
-    total_activities: Optional[int] = None
-
-    class Config:
-        orm_mode = True
+    updated_at: datetime
 
 class UserWithSubscriptions(UserRead):
     """Schema for user data with subscriptions"""
