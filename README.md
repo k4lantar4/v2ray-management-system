@@ -37,7 +37,7 @@ Our user-friendly easy installer is designed for non-specialists who want a simp
 - Guides you through the entire process with minimal technical knowledge required
 
 ```bash
-git clone https://github.com/k4lantar4/v2ray-management-system.git && cd v2ray-management-system && chmod +x easy_installer.sh && sudo ./easy_installer.sh
+git clone https://github.com/k4lantar4/v2ray-management-system.git && cd v2ray-management-system && chmod +x install.sh && sudo ./install.sh
 ```
 
 Or if you've already cloned the repository:
