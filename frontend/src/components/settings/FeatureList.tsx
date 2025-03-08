@@ -1,8 +1,15 @@
-import { FeatureFlag, UserRole } from '@/types/api';
+import { useState } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -10,130 +17,129 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { FeatureFlag, UserRole } from '@/types/api';
+import { Save, Undo, Users } from 'lucide-react';
 
 interface FeatureListProps {
   features: FeatureFlag[];
-  onUpdate: (featureId: string, data: any) => Promise<void>;
-  disabled?: boolean;
+  onUpdate: (features: FeatureFlag[]) => Promise<void>;
 }
 
-export function FeatureList({ features, onUpdate, disabled = false }: FeatureListProps) {
-  const handleToggle = async (feature: FeatureFlag) => {
+export function FeatureList({ features, onUpdate }: FeatureListProps) {
+  const [editedFeatures, setEditedFeatures] = useState<{ [key: string]: Partial<FeatureFlag> }>({});
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleChange = (feature: FeatureFlag, changes: Partial<FeatureFlag>) => {
+    setEditedFeatures((prev) => ({
+      ...prev,
+      [feature.id]: {
+        ...(prev[feature.id] || {}),
+        ...changes,
+      },
+    }));
+  };
+
+  const handleSave = async () => {
     try {
-      await onUpdate(feature.id, { isEnabled: !feature.isEnabled });
+      setIsUpdating(true);
+      const updatedFeatures = features.map((feature) => ({
+        ...feature,
+        ...(editedFeatures[feature.id] || {}),
+      }));
+      await onUpdate(updatedFeatures);
+      setEditedFeatures({});
     } catch (error) {
-      console.error('Failed to toggle feature:', error);
+      console.error('Failed to update features:', error);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  const handleNameChange = async (feature: FeatureFlag, name: string) => {
-    try {
-      await onUpdate(feature.id, { name });
-    } catch (error) {
-      console.error('Failed to update feature name:', error);
-    }
+  const handleReset = () => {
+    setEditedFeatures({});
   };
 
-  const handleDescriptionChange = async (feature: FeatureFlag, description: string) => {
-    try {
-      await onUpdate(feature.id, { description });
-    } catch (error) {
-      console.error('Failed to update feature description:', error);
-    }
-  };
-
-  const handleAddRole = async (feature: FeatureFlag, role: UserRole) => {
-    if (feature.roles.includes(role)) return;
-
-    try {
-      await onUpdate(feature.id, { roles: [...feature.roles, role] });
-    } catch (error) {
-      console.error('Failed to add role:', error);
-    }
-  };
-
-  const handleRemoveRole = async (feature: FeatureFlag, role: UserRole) => {
-    try {
-      await onUpdate(feature.id, {
-        roles: feature.roles.filter((r) => r !== role),
-      });
-    } catch (error) {
-      console.error('Failed to remove role:', error);
-    }
-  };
+  const hasChanges = Object.keys(editedFeatures).length > 0;
 
   return (
-    <div className="space-y-6">
-      {features.map((feature) => (
-        <div key={feature.key} className="space-y-4 rounded-lg border p-4">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center space-x-2">
-                <Input
-                  value={feature.name}
-                  onChange={(e) => handleNameChange(feature, e.target.value)}
-                  disabled={disabled || !feature.isEnabled}
-                  className="h-7 text-lg font-semibold"
-                />
-                <Badge variant={feature.isEnabled ? 'default' : 'secondary'}>
-                  {feature.key}
-                </Badge>
-              </div>
-              <Input
-                value={feature.description}
-                onChange={(e) => handleDescriptionChange(feature, e.target.value)}
-                disabled={disabled || !feature.isEnabled}
-                className="text-sm text-muted-foreground"
-              />
-            </div>
-            <Switch
-              checked={feature.isEnabled}
-              onCheckedChange={() => handleToggle(feature)}
-              disabled={disabled}
-            />
-          </div>
+    <div className="space-y-4">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[250px]">Feature</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead className="w-[200px]">Roles</TableHead>
+            <TableHead className="w-[100px]">Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {features.map((feature) => {
+            const edited = editedFeatures[feature.id] || {};
+            const roles = edited.roles || feature.roles;
+            const isEnabled = edited.isEnabled ?? feature.isEnabled;
 
-          <div className="space-y-2">
-            <Label>Allowed Roles</Label>
-            <div className="flex flex-wrap gap-2">
-              {feature.roles.map((role) => (
-                <Badge key={role} variant="secondary" className="space-x-1">
-                  <span>{role}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0 hover:bg-transparent"
-                    onClick={() => handleRemoveRole(feature, role)}
-                    disabled={disabled || !feature.isEnabled}
+            return (
+              <TableRow key={feature.id}>
+                <TableCell>
+                  <div className="font-medium">{feature.name}</div>
+                  <div className="text-sm text-muted-foreground">{feature.key}</div>
+                </TableCell>
+                <TableCell>
+                  <Input
+                    value={edited.description ?? feature.description}
+                    onChange={(e) =>
+                      handleChange(feature, { description: e.target.value })
+                    }
+                    className="h-8"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Select
+                    value={roles.join(',')}
+                    onValueChange={(value) =>
+                      handleChange(feature, {
+                        roles: value ? (value.split(',') as UserRole[]) : [],
+                      })
+                    }
                   >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              ))}
-              <Select
-                value=""
-                onValueChange={(value) => handleAddRole(feature, value as UserRole)}
-                disabled={disabled || !feature.isEnabled}
-              >
-                <SelectTrigger className="h-7 w-[150px]">
-                  <SelectValue placeholder="Add role..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(['admin', 'seller', 'customer'])
-                    .filter((role) => !feature.roles.includes(role as UserRole))
-                    .map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {role}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="Select roles" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin,seller,customer">All Roles</SelectItem>
+                      <SelectItem value="admin">Admin Only</SelectItem>
+                      <SelectItem value="admin,seller">Admin & Seller</SelectItem>
+                      <SelectItem value="customer">Customer Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>
+                  <Switch
+                    checked={isEnabled}
+                    onCheckedChange={(checked) =>
+                      handleChange(feature, { isEnabled: checked })
+                    }
+                  />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+
+      {hasChanges && (
+        <div className="flex items-center justify-end space-x-2">
+          <Button variant="outline" onClick={handleReset} disabled={isUpdating}>
+            <Undo className="mr-2 h-4 w-4" />
+            Reset
+          </Button>
+          <Button onClick={handleSave} disabled={isUpdating}>
+            <Save className="mr-2 h-4 w-4" />
+            Save Changes
+          </Button>
         </div>
-      ))}
+      )}
     </div>
   );
 } 

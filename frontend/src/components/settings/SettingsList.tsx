@@ -1,9 +1,17 @@
 import { useState } from 'react';
-import { SystemSetting } from '@/types/api';
-import { Switch } from '@/components/ui/switch';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -11,44 +19,57 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { AlertCircle } from 'lucide-react';
+import { SystemSetting, SettingValueType } from '@/types/api';
+import { Save, Undo } from 'lucide-react';
 
 interface SettingsListProps {
   settings: SystemSetting[];
-  onUpdate: (settingId: string, data: any) => Promise<void>;
-  disabled?: boolean;
+  onUpdate: (settings: SystemSetting[]) => Promise<void>;
 }
 
-export function SettingsList({ settings, onUpdate, disabled = false }: SettingsListProps) {
-  const [editingId, setEditingId] = useState<string | null>(null);
+export function SettingsList({ settings, onUpdate }: SettingsListProps) {
+  const [editedSettings, setEditedSettings] = useState<{ [key: string]: any }>({});
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleValueChange = async (setting: SystemSetting, value: any) => {
+  const handleValueChange = (setting: SystemSetting, value: any) => {
+    setEditedSettings((prev) => ({
+      ...prev,
+      [setting.id]: value,
+    }));
+  };
+
+  const handleSave = async () => {
     try {
-      await onUpdate(setting.id, { value });
+      setIsUpdating(true);
+      const updatedSettings = settings.map((setting) => ({
+        ...setting,
+        value:
+          setting.id in editedSettings
+            ? editedSettings[setting.id]
+            : setting.value,
+      }));
+      await onUpdate(updatedSettings);
+      setEditedSettings({});
     } catch (error) {
-      console.error('Failed to update setting value:', error);
+      console.error('Failed to update settings:', error);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  const handleToggle = async (setting: SystemSetting) => {
-    try {
-      await onUpdate(setting.id, { isEnabled: !setting.isEnabled });
-    } catch (error) {
-      console.error('Failed to toggle setting:', error);
-    }
+  const handleReset = () => {
+    setEditedSettings({});
   };
 
   const renderSettingInput = (setting: SystemSetting) => {
-    const isEditing = editingId === setting.id;
+    const value = setting.id in editedSettings ? editedSettings[setting.id] : setting.value;
 
     switch (setting.type) {
       case 'boolean':
         return (
           <Switch
-            checked={setting.value}
-            onCheckedChange={(value) => handleValueChange(setting, value)}
-            disabled={disabled || !setting.isEnabled}
+            checked={value}
+            onCheckedChange={(checked) => handleValueChange(setting, checked)}
           />
         );
 
@@ -56,41 +77,26 @@ export function SettingsList({ settings, onUpdate, disabled = false }: SettingsL
         return (
           <Input
             type="number"
-            value={setting.value}
-            onChange={(e) => handleValueChange(setting, parseFloat(e.target.value))}
-            disabled={disabled || !setting.isEnabled}
+            value={value}
+            onChange={(e) => handleValueChange(setting, Number(e.target.value))}
             className="w-[200px]"
           />
         );
 
       case 'json':
-        return (
-          <Textarea
-            value={isEditing ? setting.value : JSON.stringify(setting.value, null, 2)}
-            onChange={(e) => {
-              try {
-                const value = JSON.parse(e.target.value);
-                handleValueChange(setting, value);
-              } catch (error) {
-                // Invalid JSON, ignore
-              }
-            }}
-            disabled={disabled || !setting.isEnabled}
-            className="font-mono h-[100px] w-full"
-            onFocus={() => setEditingId(setting.id)}
-            onBlur={() => setEditingId(null)}
-          />
-        );
-
       case 'array':
         return (
           <Textarea
-            value={isEditing ? setting.value : setting.value.join('\n')}
-            onChange={(e) => handleValueChange(setting, e.target.value.split('\n'))}
-            disabled={disabled || !setting.isEnabled}
-            className="h-[100px] w-full"
-            onFocus={() => setEditingId(setting.id)}
-            onBlur={() => setEditingId(null)}
+            value={typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+            onChange={(e) => {
+              try {
+                const parsed = JSON.parse(e.target.value);
+                handleValueChange(setting, parsed);
+              } catch {
+                handleValueChange(setting, e.target.value);
+              }
+            }}
+            className="h-[100px] w-[300px] font-mono text-sm"
           />
         );
 
@@ -98,41 +104,73 @@ export function SettingsList({ settings, onUpdate, disabled = false }: SettingsL
         return (
           <Input
             type="text"
-            value={setting.value}
+            value={value}
             onChange={(e) => handleValueChange(setting, e.target.value)}
-            disabled={disabled || !setting.isEnabled}
-            className="w-full"
+            className="w-[300px]"
           />
         );
     }
   };
 
+  const hasChanges = Object.keys(editedSettings).length > 0;
+
   return (
-    <div className="space-y-6">
-      {settings.map((setting) => (
-        <div key={setting.key} className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center space-x-2">
-                <Label>{setting.key}</Label>
-                {setting.requiresRestart && (
-                  <Badge variant="outline" className="text-yellow-600">
-                    <AlertCircle className="mr-1 h-3 w-3" />
-                    Requires Restart
-                  </Badge>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground">{setting.description}</p>
-            </div>
-            <Switch
-              checked={setting.isEnabled}
-              onCheckedChange={() => handleToggle(setting)}
-              disabled={disabled}
-            />
-          </div>
-          <div className="pt-2">{renderSettingInput(setting)}</div>
+    <div className="space-y-4">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[300px]">Setting</TableHead>
+            <TableHead>Value</TableHead>
+            <TableHead className="w-[150px]">Type</TableHead>
+            <TableHead className="w-[100px]">Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {settings.map((setting) => (
+            <TableRow key={setting.id}>
+              <TableCell>
+                <div className="space-y-1">
+                  <div className="font-medium">{setting.key}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {setting.description}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>{renderSettingInput(setting)}</TableCell>
+              <TableCell>
+                <Badge variant="outline">{setting.type}</Badge>
+              </TableCell>
+              <TableCell>
+                <Badge
+                  variant={setting.isEnabled ? 'default' : 'secondary'}
+                >
+                  {setting.isEnabled ? 'Enabled' : 'Disabled'}
+                </Badge>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      {hasChanges && (
+        <div className="flex items-center justify-end space-x-2">
+          <Button
+            variant="outline"
+            onClick={handleReset}
+            disabled={isUpdating}
+          >
+            <Undo className="mr-2 h-4 w-4" />
+            Reset
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={isUpdating}
+          >
+            <Save className="mr-2 h-4 w-4" />
+            Save Changes
+          </Button>
         </div>
-      ))}
+      )}
     </div>
   );
 } 

@@ -210,3 +210,117 @@ For issues and support:
 ## License
 
 [Your License Here]
+
+# V2Ray Management System Installation Guide
+
+[English](#english) | [فارسی](#persian)
+
+<a name="english"></a>
+## English
+
+### Quick Installation
+
+1. Make sure you have a fresh Ubuntu server with root access
+2. Run the following command:
+```bash
+curl -fsSL https://raw.githubusercontent.com/your-repo/v2ray-management/main/install.sh | bash
+```
+
+### Requirements
+- Ubuntu 20.04 or higher
+- Domain name pointed to your server
+- Telegram Bot Token
+- Admin Telegram ID
+
+### Manual Installation
+If you prefer to install manually:
+
+1. Clone the repository:
+```bash
+git clone https://github.com/your-repo/v2ray-management.git
+cd v2ray-management
+```
+
+2. Make the installer executable:
+```bash
+chmod +x install.sh
+```
+
+3. Run the installer:
+```bash
+./install.sh
+```
+
+### Features
+- Automatic installation of all dependencies
+- SSL certificate setup
+- Docker container configuration
+- Telegram bot webhook setup
+- Firewall configuration
+- Progress tracking for interrupted installations
+- Bilingual interface (English/Persian)
+
+### Troubleshooting
+If you encounter any issues during installation:
+1. Check the logs in `/var/log/v2ray/`
+2. Ensure your domain is properly pointed to the server
+3. Verify that ports 80 and 443 are not in use
+4. Make sure your Telegram bot token is valid
+
+For support, please open an issue on GitHub.
+
+---
+
+<a name="persian"></a>
+## فارسی
+
+### نصب سریع
+
+۱. اطمینان حاصل کنید که یک سرور اوبونتو تازه با دسترسی روت دارید
+۲. دستور زیر را اجرا کنید:
+```bash
+curl -fsSL https://raw.githubusercontent.com/your-repo/v2ray-management/main/install.sh | bash
+```
+
+### پیش‌نیازها
+- اوبونتو ۲۰.۰۴ یا بالاتر
+- دامنه متصل به سرور
+- توکن ربات تلگرام
+- شناسه عددی مدیر در تلگرام
+
+### نصب دستی
+اگر ترجیح می‌دهید به صورت دستی نصب کنید:
+
+۱. کلون کردن مخزن:
+```bash
+git clone https://github.com/your-repo/v2ray-management.git
+cd v2ray-management
+```
+
+۲. اجرایی کردن نصب‌کننده:
+```bash
+chmod +x install.sh
+```
+
+۳. اجرای نصب‌کننده:
+```bash
+./install.sh
+```
+
+### ویژگی‌ها
+- نصب خودکار تمامی پیش‌نیازها
+- راه‌اندازی گواهی SSL
+- پیکربندی کانتینرهای داکر
+- راه‌اندازی وبهوک ربات تلگرام
+- پیکربندی فایروال
+- پیگیری پیشرفت برای نصب‌های ناتمام
+- رابط دو زبانه (انگلیسی/فارسی)
+
+### عیب‌یابی
+در صورت بروز مشکل در حین نصب:
+۱. لاگ‌های موجود در `/var/log/v2ray/` را بررسی کنید
+۲. اطمینان حاصل کنید که دامنه به درستی به سرور متصل شده است
+۳. بررسی کنید که پورت‌های ۸۰ و ۴۴۳ در حال استفاده نباشند
+۴. از معتبر بودن توکن ربات تلگرام اطمینان حاصل کنید
+
+برای پشتیبانی، لطفاً در گیت‌هاب issue باز کنید.
