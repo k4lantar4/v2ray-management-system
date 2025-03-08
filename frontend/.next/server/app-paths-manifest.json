@@ -1,0 +1,17 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/login/page": "app/login/page.js",
+  "/dashboard/analytics/page": "app/dashboard/analytics/page.js",
+  "/dashboard/channels/page": "app/dashboard/channels/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/servers/[action]/page": "app/dashboard/servers/[action]/page.js",
+  "/dashboard/settings/page": "app/dashboard/settings/page.js",
+  "/dashboard/servers/page": "app/dashboard/servers/page.js",
+  "/dashboard/subscriptions/page": "app/dashboard/subscriptions/page.js",
+  "/dashboard/plans/page": "app/dashboard/plans/page.js",
+  "/dashboard/subscriptions/[action]/page": "app/dashboard/subscriptions/[action]/page.js",
+  "/dashboard/reports/page": "app/dashboard/reports/page.js",
+  "/dashboard/transactions/page": "app/dashboard/transactions/page.js",
+  "/dashboard/users/[action]/page": "app/dashboard/users/[action]/page.js",
+  "/dashboard/users/page": "app/dashboard/users/page.js"
+}
