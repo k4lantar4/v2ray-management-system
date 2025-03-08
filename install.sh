@@ -5,11 +5,19 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Store installation progress
 PROGRESS_FILE=".install_progress"
 BACKUP_DIR="backup_$(date +%Y%m%d_%H%M%S)"
+
+# Function to display tips
+display_tip() {
+    echo -e "${CYAN}💡 Tip/نکته:${NC} $1"
+    echo -e "${CYAN}   $2${NC}"
+    echo "----------------------------------------"
+}
 
 # Function to display messages in both English and Persian
 print_message() {
@@ -34,22 +42,46 @@ check_root() {
 # Function to validate domain
 validate_domain() {
     local domain=$1
-    if ! echo "$domain" | grep -qP '(?=^.{4,253}$)(^(?:[a-zA-Z0-9](?:(?:[a-zA-Z0-9\-]){0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$)'; then
-        handle_error "Invalid domain format" "فرمت دامنه نامعتبر است"
+    
+    # Remove any leading/trailing whitespace
+    domain=$(echo "$domain" | tr -d '[:space:]')
+    
+    # Check if domain is empty
+    if [ -z "$domain" ]; then
+        handle_error "Domain name cannot be empty" "نام دامنه نمی‌تواند خالی باشد"
+        return 1
+    fi
+
+    # Check for valid domain format
+    if ! echo "$domain" | grep -qP '^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'; then
+        print_message "Invalid domain format: $domain" "فرمت دامنه نامعتبر است: $domain"
+        print_message "Domain must be a valid FQDN (e.g., example.com)" "دامنه باید یک FQDN معتبر باشد (مثال: example.com)"
+        return 1
     fi
     
-    # Check if domain resolves to server IP
+    # Check if domain resolves
+    print_message "Checking domain DNS resolution..." "در حال بررسی تنظیمات DNS دامنه..."
+    
     local server_ip=$(curl -s ifconfig.me)
     local domain_ip=$(dig +short "$domain")
     
-    if [[ "$domain_ip" != "$server_ip" ]]; then
-        print_message "Warning: Domain $domain does not resolve to server IP $server_ip" "هشدار: دامنه $domain به IP سرور $server_ip متصل نیست"
+    if [ -z "$domain_ip" ]; then
+        print_message "Warning: Domain $domain does not resolve to any IP" "هشدار: دامنه $domain به هیچ IP ای متصل نیست"
         read -p "Continue anyway? (y/n) / ادامه می‌دهید؟ (y/n) " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
+            return 1
+        fi
+    elif [ "$domain_ip" != "$server_ip" ]; then
+        print_message "Warning: Domain $domain resolves to $domain_ip but server IP is $server_ip" "هشدار: دامنه $domain به IP سرور $server_ip متصل نیست و به $domain_ip متصل است"
+        read -p "Continue anyway? (y/n) / ادامه می‌دهید؟ (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            return 1
         fi
     fi
+
+    return 0
 }
 
 # Function to validate Telegram bot token
@@ -144,42 +176,107 @@ install_system_dependencies() {
 
 # Function to collect required information
 collect_information() {
+    clear
+    print_message "Welcome to V2Ray Management System Installation" "به نصب‌کننده سیستم مدیریت V2Ray خوش آمدید"
+    
+    display_tip "Before we begin, make sure you have:" "قبل از شروع، اطمینان حاصل کنید که موارد زیر را دارید:"
+    echo "1. A valid domain pointing to this server's IP"
+    echo "   یک دامنه معتبر که به IP این سرور اشاره می‌کند"
+    echo "2. A Telegram bot token (@BotFather)"
+    echo "   توکن ربات تلگرام (@BotFather)"
+    echo "3. Your Telegram user ID (@userinfobot)"
+    echo "   شناسه کاربری تلگرام شما (@userinfobot)"
+    echo
+
+    # Check if .env exists and ask to use it or create new
     if [ -f ".env" ]; then
-        print_message "Configuration file found. Using existing settings." "فایل تنظیمات یافت شد. از تنظیمات موجود استفاده می‌شود."
-        source .env
-        return 0
+        display_tip "An existing configuration was found" "یک پیکربندی موجود پیدا شد"
+        read -p "Use existing configuration? (y/n) / استفاده از تنظیمات موجود؟ (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            source .env
+            print_message "Using existing configuration." "استفاده از تنظیمات موجود."
+            return 0
+        fi
     fi
 
-    print_message "Please provide the following information:" "لطفاً اطلاعات زیر را وارد کنید:"
-    
+    # Domain configuration
     while true; do
-        read -p "Domain name / نام دامنه: " DOMAIN
+        print_message "Domain Configuration" "تنظیمات دامنه"
+        display_tip "Your domain should be already pointed to this server's IP" "دامنه شما باید از قبل به IP این سرور اشاره کرده باشد"
+        read -p "Enter your domain (e.g., example.com) / دامنه خود را وارد کنید (مثال: example.com): " DOMAIN
         if validate_domain "$DOMAIN"; then
             break
         fi
     done
-    
+
+    # Telegram configuration
     while true; do
-        read -p "Telegram Bot Token / توکن ربات تلگرام: " BOT_TOKEN
+        print_message "Telegram Bot Configuration" "تنظیمات ربات تلگرام"
+        display_tip "Create a bot using @BotFather if you haven't already" "اگر هنوز ربات نساخته‌اید، با استفاده از @BotFather یک ربات بسازید"
+        read -p "Enter Telegram Bot Token / توکن ربات تلگرام را وارد کنید: " BOT_TOKEN
         if validate_bot_token "$BOT_TOKEN"; then
             break
         fi
     done
-    
-    read -p "Admin Telegram ID / شناسه تلگرام مدیر: " ADMIN_ID
-    
-    # Generate random passwords
-    DB_PASSWORD=$(openssl rand -base64 32)
-    JWT_SECRET=$(openssl rand -base64 64)
-    
-    # Save to .env file
+
+    print_message "Admin Configuration" "تنظیمات مدیر"
+    display_tip "Get your Telegram ID from @userinfobot" "شناسه تلگرام خود را از @userinfobot دریافت کنید"
+    read -p "Enter Admin Telegram ID / شناسه تلگرام مدیر را وارد کنید: " ADMIN_ID
+
+    # Database configuration
+    print_message "Database Configuration" "تنظیمات پایگاه داده"
+    read -p "Enter Database Password (leave empty for random) / رمز پایگاه داده را وارد کنید (برای تصادفی خالی بگذارید): " DB_PASSWORD_INPUT
+    if [ -z "$DB_PASSWORD_INPUT" ]; then
+        DB_PASSWORD=$(openssl rand -base64 32)
+        print_message "Generated random database password" "رمز تصادفی پایگاه داده تولید شد"
+    else
+        DB_PASSWORD=$DB_PASSWORD_INPUT
+    fi
+
+    # JWT configuration
+    print_message "Security Configuration" "تنظیمات امنیتی"
+    read -p "Enter JWT Secret (leave empty for random) / کلید رمزنگاری JWT را وارد کنید (برای تصادفی خالی بگذارید): " JWT_SECRET_INPUT
+    if [ -z "$JWT_SECRET_INPUT" ]; then
+        JWT_SECRET=$(openssl rand -base64 64)
+        print_message "Generated random JWT secret" "کلید رمزنگاری JWT تصادفی تولید شد"
+    else
+        JWT_SECRET=$JWT_SECRET_INPUT
+    fi
+
+    # Save configuration
+    print_message "Saving configuration..." "در حال ذخیره تنظیمات..."
     cat > .env << EOL
+# Domain Configuration / تنظیمات دامنه
 DOMAIN=$DOMAIN
+
+# Telegram Configuration / تنظیمات تلگرام
 BOT_TOKEN=$BOT_TOKEN
 ADMIN_ID=$ADMIN_ID
+
+# Database Configuration / تنظیمات پایگاه داده
 DB_PASSWORD=$DB_PASSWORD
+
+# Security Configuration / تنظیمات امنیتی
 JWT_SECRET=$JWT_SECRET
+
+# Installation Date / تاریخ نصب
+INSTALL_DATE=$(date '+%Y-%m-%d %H:%M:%S')
 EOL
+
+    # Show configuration summary
+    print_message "Configuration Summary:" "خلاصه تنظیمات:"
+    echo -e "${YELLOW}Domain/دامنه: ${NC}$DOMAIN"
+    echo -e "${YELLOW}Admin ID/شناسه مدیر: ${NC}$ADMIN_ID"
+    echo -e "${YELLOW}Database Password/رمز پایگاه داده: ${NC}${RED}(Hidden/مخفی)${NC}"
+    echo -e "${YELLOW}JWT Secret/کلید JWT: ${NC}${RED}(Hidden/مخفی)${NC}"
+    
+    # Ask for confirmation
+    read -p "Continue with installation? (y/n) / ادامه نصب؟ (y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        handle_error "Installation cancelled by user" "نصب توسط کاربر لغو شد"
+    fi
 }
 
 # Function to fix Nginx PID issues
@@ -562,19 +659,36 @@ setup_firewall() {
 
 # Function to display completion information
 display_completion_info() {
-    print_message "Installation completed successfully!" "نصب با موفقیت انجام شد!"
+    clear
+    print_message "🎉 Installation completed successfully! 🎉" "🎉 نصب با موفقیت انجام شد! 🎉"
+    
     echo -e "${GREEN}Access Information / اطلاعات دسترسی:${NC}"
     echo "----------------------------------------"
     echo -e "Website URL / آدرس وبسایت: ${YELLOW}https://$DOMAIN${NC}"
     echo -e "Admin Panel / پنل مدیریت: ${YELLOW}https://$DOMAIN/admin${NC}"
     echo -e "API Endpoint / آدرس API: ${YELLOW}https://$DOMAIN/api${NC}"
     echo "----------------------------------------"
+    
+    display_tip "Save these credentials in a secure place" "این اطلاعات را در جای امنی ذخیره کنید"
     echo -e "${BLUE}Default Admin Credentials / اطلاعات ورود مدیر:${NC}"
     echo "Username/نام کاربری: admin"
     echo "Password/رمز عبور: admin123"
     echo "----------------------------------------"
-    echo -e "${RED}IMPORTANT: Please change the default admin password immediately!${NC}"
-    echo -e "${RED}مهم: لطفاً رمز عبور پیش‌فرض مدیر را فوراً تغییر دهید!${NC}"
+    
+    display_tip "Security Recommendations:" "توصیه‌های امنیتی:"
+    echo "1. Change the default admin password immediately"
+    echo "   رمز عبور پیش‌فرض مدیر را فوراً تغییر دهید"
+    echo "2. Enable Two-Factor Authentication"
+    echo "   احراز هویت دو مرحله‌ای را فعال کنید"
+    echo "3. Regularly backup your configuration"
+    echo "   از تنظیمات خود به طور منظم پشتیبان تهیه کنید"
+    echo "4. Keep your system updated"
+    echo "   سیستم خود را به‌روز نگه دارید"
+    echo "----------------------------------------"
+    
+    display_tip "Need help? Join our community:" "نیاز به کمک دارید؟ به انجمن ما بپیوندید:"
+    echo "Telegram: @v2ray_management_system"
+    echo "GitHub: github.com/v2ray-management-system/support"
 }
 
 # Main installation process
@@ -587,17 +701,41 @@ main() {
     # Create progress file if it doesn't exist
     touch "$PROGRESS_FILE"
     
+    # First collect all required information
+    collect_information
+    
+    # Show installation plan
+    print_message "Installation Plan:" "برنامه نصب:"
+    echo "1. Backup existing configurations / پشتیبان‌گیری از تنظیمات موجود"
+    echo "2. Install system dependencies / نصب پیش‌نیازهای سیستم"
+    echo "3. Configure firewall / پیکربندی فایروال"
+    echo "4. Setup SSL certificate / راه‌اندازی گواهی SSL"
+    echo "5. Setup Docker containers / راه‌اندازی کانتینرهای Docker"
+    echo "6. Configure Telegram webhook / پیکربندی وبهوک تلگرام"
+    
+    read -p "Press Enter to continue... / برای ادامه Enter را فشار دهید..." -n 1 -r
+    echo
+    
     # Backup existing configurations
     backup_configs
     
-    # Run installation steps
+    # Run installation steps with progress indication
+    print_message "Step 1/6: Installing system dependencies..." "مرحله 1/6: نصب پیش‌نیازهای سیستم..."
     install_system_dependencies
-    collect_information
+    
+    print_message "Step 2/6: Configuring firewall..." "مرحله 2/6: پیکربندی فایروال..."
     setup_firewall
+    
+    print_message "Step 3/6: Setting up SSL certificate..." "مرحله 3/6: راه‌اندازی گواهی SSL..."
     setup_ssl
+    
+    print_message "Step 4/6: Setting up Docker containers..." "مرحله 4/6: راه‌اندازی کانتینرهای Docker..."
     setup_docker
+    
+    print_message "Step 5/6: Setting up Telegram webhook..." "مرحله 5/6: پیکربندی وبهوک تلگرام..."
     setup_telegram_webhook
     
+    print_message "Step 6/6: Finalizing installation..." "مرحله 6/6: نهایی‌سازی نصب..."
     display_completion_info
 }
 
