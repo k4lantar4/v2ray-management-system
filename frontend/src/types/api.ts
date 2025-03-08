@@ -234,4 +234,194 @@ export interface SupportGroup {
   status: Status;
   createdAt: string;
   updatedAt: string;
+}
+
+// Dynamic Settings Types
+export type SettingValueType = 'boolean' | 'string' | 'number' | 'json' | 'array';
+
+export interface SystemSetting {
+  id: string;
+  key: string;
+  value: any;
+  type: SettingValueType;
+  category: string;
+  description: string;
+  isEnabled: boolean;
+  requiresRestart: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FeatureFlag {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  isEnabled: boolean;
+  roles: UserRole[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ModuleConfig {
+  id: string;
+  name: string;
+  description: string;
+  isEnabled: boolean;
+  settings: SystemSetting[];
+  features: FeatureFlag[];
+  category: string;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateSettingDto {
+  value?: any;
+  isEnabled?: boolean;
+}
+
+export interface UpdateFeatureDto {
+  name?: string;
+  description?: string;
+  isEnabled?: boolean;
+  roles?: UserRole[];
+}
+
+export interface UpdateModuleDto {
+  name?: string;
+  description?: string;
+  isEnabled?: boolean;
+  order?: number;
+}
+
+// Analytics Types
+export type TimeRange = 'today' | 'yesterday' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
+export type ChartType = 'line' | 'bar' | 'pie' | 'area' | 'radar';
+
+export interface AnalyticsFilter {
+  timeRange: TimeRange;
+  startDate?: string;
+  endDate?: string;
+  userRole?: UserRole;
+  status?: Status;
+  groupBy?: string;
+}
+
+export interface MetricValue {
+  value: number;
+  change: number; // Percentage change from previous period
+  trend: 'up' | 'down' | 'stable';
+}
+
+export interface DashboardMetrics {
+  totalRevenue: MetricValue;
+  newUsers: MetricValue;
+  activeSubscriptions: MetricValue;
+  averageOrderValue: MetricValue;
+  userRetentionRate: MetricValue;
+  churnRate: MetricValue;
+}
+
+export interface ChartData {
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    backgroundColor?: string[];
+    borderColor?: string;
+  }[];
+}
+
+export interface RevenueAnalytics {
+  total: MetricValue;
+  byPlan: { [planId: string]: MetricValue };
+  byPeriod: ChartData;
+  projectedRevenue: MetricValue;
+  recurringRevenue: MetricValue;
+}
+
+export interface UserAnalytics {
+  total: MetricValue;
+  active: MetricValue;
+  byRole: { [role in UserRole]: MetricValue };
+  acquisitionChannels: {
+    channel: string;
+    users: number;
+    conversion: number;
+  }[];
+  retentionCohorts: {
+    cohort: string;
+    users: number;
+    retentionRates: number[];
+  }[];
+}
+
+export interface MarketingInsights {
+  customerSegments: {
+    segment: string;
+    size: number;
+    averageSpend: number;
+    churnRisk: 'low' | 'medium' | 'high';
+    commonPlans: string[];
+    recommendedActions: string[];
+  }[];
+  promotionalCampaigns: {
+    id: string;
+    name: string;
+    type: 'discount' | 'referral' | 'upgrade' | 'winback';
+    status: Status;
+    targetSegment: string;
+    metrics: {
+      reach: number;
+      engagement: number;
+      conversion: number;
+      revenue: number;
+    };
+    createdAt: string;
+    updatedAt: string;
+  }[];
+  contentPerformance: {
+    channelId: string;
+    posts: {
+      id: string;
+      type: 'promotion' | 'educational' | 'announcement';
+      engagement: number;
+      conversion: number;
+      sentiment: 'positive' | 'neutral' | 'negative';
+    }[];
+  }[];
+}
+
+export interface AIRecommendations {
+  userSegmentation: {
+    segment: string;
+    characteristics: string[];
+    recommendedPlans: string[];
+    marketingMessages: string[];
+    predictedLTV: number;
+  }[];
+  contentSuggestions: {
+    topic: string;
+    type: 'post' | 'story' | 'poll';
+    targetAudience: string[];
+    bestTime: string;
+    predictedEngagement: number;
+  }[];
+  pricingOptimization: {
+    planId: string;
+    currentPrice: number;
+    recommendedPrice: number;
+    reasoning: string[];
+    potentialRevenueLift: number;
+  }[];
+  retentionStrategies: {
+    riskSegment: string;
+    churnProbability: number;
+    recommendedActions: {
+      action: string;
+      priority: 'high' | 'medium' | 'low';
+      expectedImpact: number;
+    }[];
+  }[];
 } 
