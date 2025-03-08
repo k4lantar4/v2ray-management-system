@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,10 +8,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Icons } from "@/components/icons";
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuthStore } from '@/store';
+import { BrandTelegram } from 'lucide-react';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { isAuthenticated, loginWithToken } = useAuthStore();
+
+  // Handle token from Telegram bot
+  useEffect(() => {
+    const token = searchParams.get('token');
+    if (token && !isAuthenticated) {
+      loginWithToken(token).then(() => {
+        router.push('/dashboard');
+      });
+    } else if (isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, searchParams]);
 
   const onPasswordLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -43,9 +61,9 @@ export default function LoginPage() {
     }
   };
 
-  const onTelegramLogin = () => {
-    // Implement Telegram login logic
-    window.location.href = "/api/auth/telegram";
+  const handleTelegramLogin = () => {
+    // Replace with your Telegram bot link
+    window.location.href = process.env.NEXT_PUBLIC_TELEGRAM_BOT_URL || 'https://t.me/your_bot';
   };
 
   return (
@@ -101,13 +119,13 @@ export default function LoginPage() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={onTelegramLogin}
+                    onClick={handleTelegramLogin}
                     disabled={isLoading}
                   >
                     {isLoading && (
                       <Icons.spinner className="ml-2 h-4 w-4 animate-spin" />
                     )}
-                    <Icons.telegram className="ml-2 h-4 w-4" />
+                    <BrandTelegram className="ml-2 h-4 w-4" />
                     ورود با تلگرام
                   </Button>
                 </div>

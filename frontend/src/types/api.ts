@@ -19,13 +19,24 @@ export interface PaginatedResponse<T> {
 }
 
 // User Types
+export type UserRole = 'admin' | 'seller' | 'customer';
+
+export interface TelegramUser {
+  id: number;
+  username?: string;
+  firstName: string;
+  lastName?: string;
+  phoneNumber: string;
+}
+
 export interface User {
   id: ID;
-  username: string;
-  email: string;
-  telegramId: string;
-  credit: number;
+  email?: string;
+  telegram: TelegramUser;
+  role: UserRole;
   status: Status;
+  credit: number;
+  isPhoneVerified: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -73,8 +84,9 @@ export interface Plan {
   name: string;
   description: string;
   price: number;
-  duration: number;
-  bandwidth: number;
+  sellerPrice?: number; // Special price for sellers
+  duration: number; // in months
+  bandwidth: number; // in GB
   features: string[];
   status: Status;
   createdAt: string;
@@ -151,4 +163,75 @@ export interface LoginDto {
 export interface AuthResponse {
   token: string;
   user: User;
+}
+
+export interface SellerRequest {
+  id: number;
+  user: User;
+  status: 'pending' | 'approved' | 'rejected';
+  message: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Telegram Channel Types
+export interface TelegramChannel {
+  id: string;
+  username: string;
+  title: string;
+  membersCount: number;
+  isAdmin: boolean;
+  status: Status;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChannelStats {
+  id: string;
+  channelId: string;
+  viewsCount: number;
+  messagesCount: number;
+  growthRate: number;
+  topPosts: ScheduledPost[];
+  period: 'day' | 'week' | 'month';
+}
+
+export interface ScheduledPost {
+  id: string;
+  channelId: string;
+  content: string;
+  scheduledAt: string;
+  status: 'pending' | 'published' | 'failed';
+  views?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContentGenerationRequest {
+  topic: string;
+  tone?: 'professional' | 'casual' | 'friendly';
+  length?: 'short' | 'medium' | 'long';
+  includeHashtags?: boolean;
+  includeEmojis?: boolean;
+}
+
+export interface GeneratedContent {
+  id: string;
+  topic: string;
+  content: string;
+  hashtags?: string[];
+  suggestedTime?: string;
+  createdAt: string;
+}
+
+// Support Group Types
+export interface SupportGroup {
+  id: string;
+  name: string;
+  description: string;
+  membersCount: number;
+  admins: User[];
+  status: Status;
+  createdAt: string;
+  updatedAt: string;
 } 
