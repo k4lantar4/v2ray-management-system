@@ -182,6 +182,86 @@ JWT_SECRET=$JWT_SECRET
 EOL
 }
 
+# Function to fix Nginx PID issues
+fix_nginx_pid() {
+    print_message "Fixing Nginx PID configuration..." "در حال رفع مشکل پیکربندی PID نرم‌افزار Nginx..."
+    
+    # Create nginx pid directory
+    mkdir -p /run/nginx
+    
+    # Create systemd override directory
+    mkdir -p /etc/systemd/system/nginx.service.d
+    
+    # Create override file to handle PID race condition
+    cat > /etc/systemd/system/nginx.service.d/override.conf << EOL
+[Service]
+ExecStartPost=/bin/sleep 0.1
+PIDFile=/run/nginx/nginx.pid
+EOL
+
+    # Reload systemd and restart nginx
+    systemctl daemon-reload
+    systemctl restart nginx
+}
+
+# Function to setup Nginx base configuration
+setup_nginx_base() {
+    print_message "Setting up Nginx base configuration..." "در حال پیکربندی پایه Nginx..."
+    
+    # Backup original nginx.conf if exists
+    if [ -f /etc/nginx/nginx.conf ]; then
+        cp /etc/nginx/nginx.conf "/etc/nginx/nginx.conf.backup_$(date +%Y%m%d_%H%M%S)"
+    fi
+    
+    # Create a clean nginx.conf
+    cat > /etc/nginx/nginx.conf << 'EOL'
+user www-data;
+worker_processes auto;
+pid /run/nginx/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 768;
+    multi_accept on;
+}
+
+http {
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+
+    gzip on;
+
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}
+EOL
+
+    # Create necessary directories
+    mkdir -p /etc/nginx/sites-available
+    mkdir -p /etc/nginx/sites-enabled
+    mkdir -p /etc/nginx/conf.d
+    mkdir -p /var/log/nginx
+    
+    # Remove default symbolic link if exists
+    rm -f /etc/nginx/sites-enabled/default
+    
+    # Set proper permissions
+    chown -R www-data:www-data /var/log/nginx
+    chmod -R 755 /etc/nginx
+}
+
 # Function to setup SSL with timeout and proper error handling
 setup_ssl() {
     if is_step_completed "ssl_setup"; then
@@ -191,10 +271,12 @@ setup_ssl() {
 
     print_message "Setting up SSL certificate..." "در حال راه‌اندازی گواهی SSL..."
     
-    # Ensure the sites-available directory exists
-    mkdir -p /etc/nginx/sites-available
-    mkdir -p /etc/nginx/sites-enabled
-
+    # Setup base Nginx configuration first
+    setup_nginx_base
+    
+    # Fix Nginx PID issues
+    fix_nginx_pid
+    
     # Remove any existing configuration for this domain
     rm -f "/etc/nginx/sites-available/${DOMAIN}.conf"
     rm -f "/etc/nginx/sites-enabled/${DOMAIN}.conf"
@@ -234,19 +316,22 @@ server {
 }
 EOL
 
-    # Create symbolic link
+    # Create symbolic link with full path
     ln -sf "/etc/nginx/sites-available/${DOMAIN}.conf" "/etc/nginx/sites-enabled/${DOMAIN}.conf"
 
-    # Verify Nginx configuration
+    # Test Nginx configuration
     if ! nginx -t; then
-        handle_error "Invalid Nginx configuration" "تنظیمات Nginx نامعتبر است"
+        print_message "Attempting to fix Nginx configuration..." "در حال تلاش برای رفع مشکل پیکربندی Nginx..."
+        setup_nginx_base
+        fix_nginx_pid
+        if ! nginx -t; then
+            handle_error "Invalid Nginx configuration" "تنظیمات Nginx نامعتبر است"
+        fi
     fi
-
-    # Restart Nginx to apply changes
-    systemctl restart nginx || handle_error "Failed to restart Nginx" "راه‌اندازی مجدد Nginx با خطا مواجه شد"
 
     # Create webroot directory if it doesn't exist
     mkdir -p /var/www/html
+    chown -R www-data:www-data /var/www/html
 
     # Stop Nginx before running Certbot
     systemctl stop nginx
