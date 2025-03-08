@@ -4,16 +4,12 @@ const path = require('path');
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
-  experimental: {
-    outputFileTracingRoot: path.join(__dirname, '../../'),
-  },
+  outputFileTracingRoot: path.join(__dirname, '../../'),
   webpack: (config) => {
-    config.resolve = {
-      ...config.resolve,
-      alias: {
-        ...config.resolve.alias,
-        '@': path.join(__dirname, 'src'),
-      },
+    // Simplify the alias configuration
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.join(__dirname, './src'),
     };
     return config;
   },
