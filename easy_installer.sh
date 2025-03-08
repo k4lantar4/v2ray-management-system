@@ -281,6 +281,31 @@ setup_firewall() {
     echo "y" | ufw enable
 }
 
+# Function to install frontend dependencies
+install_frontend_deps() {
+    display_info "Installing frontend dependencies..."
+    
+    if [ ! -d "frontend" ]; then
+        display_error "Frontend directory not found"
+        return 1
+    fi
+    
+    cd frontend || return 1
+    
+    # First try with --legacy-peer-deps
+    if ! npm install --legacy-peer-deps; then
+        display_warning "Failed to install with --legacy-peer-deps, trying with --force"
+        if ! npm install --force; then
+            display_error "Failed to install frontend dependencies"
+            cd ..
+            return 1
+        fi
+    fi
+    
+    cd ..
+    return 0
+}
+
 # Main installation process
 main() {
     clear
@@ -325,24 +350,36 @@ main() {
     # Install project dependencies
     display_step 9 "Installing project dependencies"
     pip install -r requirements.txt
-    cd frontend && npm install && cd ..
+    install_frontend_deps
     
     # Generate environment variables
     display_step 10 "Configuring environment"
     if [ ! -f .env ]; then
+        if [ ! -f .env.example ]; then
+            display_error "No .env.example file found"
+            exit 1
+        fi
         cp .env.example .env
         # Update environment variables
         sed -i "s/your-secret-key-here/$(generate_random)/g" .env
-        sed -i "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$(generate_random)/g" .env
-        sed -i "s/REDIS_PASSWORD=.*/REDIS_PASSWORD=$(generate_random)/g" .env
+        sed -i "s/change-me-in-production/$(generate_random)/g" .env
     fi
     
     # Build frontend
     display_step 11 "Building frontend"
-    cd frontend && npm run build && cd ..
+    if [ -d "frontend" ]; then
+        cd frontend && npm run build && cd ..
+    else
+        display_error "Frontend directory not found"
+        exit 1
+    fi
     
     # Start services
     display_step 12 "Starting services"
+    if [ ! -f "docker-compose.yml" ]; then
+        display_error "docker-compose.yml not found"
+        exit 1
+    fi
     docker-compose up -d
     
     # Display success message
