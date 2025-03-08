@@ -21,16 +21,20 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy all necessary files
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/package.json ./package.json
-COPY --from=deps /app/package-lock.json ./package-lock.json
-COPY --from=deps /app/tsconfig.json ./tsconfig.json
-COPY --from=deps /app/jsconfig.json ./jsconfig.json
-COPY --from=deps /app/next.config.js ./next.config.js
+COPY --from=deps /app/node_modules/ ./node_modules/
+COPY --from=deps /app/package.json ./
+COPY --from=deps /app/package-lock.json ./
+COPY --from=deps /app/tsconfig.json ./
+COPY --from=deps /app/jsconfig.json ./
+COPY --from=deps /app/next.config.js ./
+
+# Create public directory
+RUN mkdir -p public
 
 # Copy source code
-COPY src ./src
-COPY public ./public
+COPY src/ ./src/
+# Try to copy public directory if it exists
+RUN mkdir -p public && cp -r ../public/* public/ 2>/dev/null || true
 
 # Set environment variables
 ENV NEXT_TELEMETRY_DISABLED 1
@@ -56,16 +60,16 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Create necessary directories with correct permissions
-RUN mkdir -p .next/cache/images && chown -R nextjs:nodejs .next
+RUN mkdir -p .next/cache/images public && chown -R nextjs:nodejs .next public
 
 # Switch to non-root user
 USER nextjs
 
 # Copy necessary files from builder
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public/ ./public/
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/ ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static/ ./.next/static/
 
 # Expose the port
 EXPOSE 3000
