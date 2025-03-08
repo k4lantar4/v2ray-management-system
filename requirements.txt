@@ -1,10 +1,10 @@
 # 🌟 Core Dependencies
 fastapi==0.110.0
-uvicorn==0.27.1
+uvicorn[standard]==0.27.1
 python-telegram-bot==20.8
-sqlmodel==0.0.20  # First version with pydantic 2.x support
+sqlmodel==0.0.14  # More stable version with SQLAlchemy 2.0
 alembic==1.13.1
-pydantic==2.6.1
+pydantic[email]==2.6.1
 python-dotenv==1.0.1
 
 # 🔐 Security
@@ -20,32 +20,33 @@ psycopg2-binary==2.9.9
 # 🚀 Async Support
 aiohttp==3.9.3
 httpx>=0.26.0,<0.28.0
-asyncio==3.4.3
 
 # 🔄 Background Tasks
-celery==5.3.6
+celery[redis]==5.3.6
 redis==5.0.1
 flower==2.0.1
 
 # 📝 Logging & Monitoring
 loguru==0.7.2
 prometheus-client==0.19.0
-sentry-sdk==1.40.4
+sentry-sdk[fastapi]==1.40.4
 
 # 🧪 Testing
 pytest==8.0.0
 pytest-asyncio==0.23.5
 pytest-cov==4.1.0
+pytest-mock==3.12.0
 
 # 🛠️ Development Tools
 black==24.2.0
 flake8==7.0.0
 isort==5.13.2
 mypy==1.8.0
+pre-commit==3.6.1
 
 # 📦 Additional Utilities
 python-slugify==8.0.4
-Pillow==10.2.0  # For image processing
-aiofiles==23.2.1  # For async file operations
-ujson==5.9.0  # Fast JSON processing
-pytz==2024.1  # Timezone support
+Pillow==10.2.0
+aiofiles==23.2.1
+orjson==3.9.15  # Faster than ujson
+pytz==2024.1

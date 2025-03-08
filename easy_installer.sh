@@ -18,6 +18,12 @@ WHITE='\033[1;37m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
 
+# Set environment variables
+export DEBIAN_FRONTEND=noninteractive
+export NODE_VERSION=18.19.1
+export PYTHON_VERSION=3.11
+export DOCKER_COMPOSE_VERSION=v2.24.5
+
 # Function to display fancy headers
 display_header() {
     local text="$1"
@@ -128,214 +134,226 @@ display_mrj() {
 # Set total number of installation steps
 TOTAL_STEPS=12
 
-# Display welcome message
-clear
-display_header "Welcome to V2Ray Management System Installer"
-echo -e "${YELLOW}This installer will set up all prerequisites for the V2Ray Management System.${NC}"
-echo -e "${YELLOW}It is designed to be user-friendly and handle errors gracefully.${NC}"
-echo -e "\n${BOLD}${WHITE}Press Enter to continue...${NC}"
-read
-
-# Check if running as root
-check_root
-
-# Step 1: Update system packages
-display_step 1 "Updating system packages"
-apt-get update && apt-get upgrade -y
-if [ $? -ne 0 ]; then
-    handle_error "Failed to update system packages" "Check your internet connection and try again"
-fi
-display_success "System packages updated successfully"
-
-# Step 2: Install basic utilities (least important)
-display_step 2 "Installing basic utilities"
-apt-get install -y \
-    curl \
-    wget \
-    git \
-    openssl \
-    ca-certificates \
-    gnupg \
-    lsb-release \
-    apt-transport-https \
-    software-properties-common
-
-if [ $? -ne 0 ]; then
-    handle_error "Failed to install basic utilities" "Try running 'apt-get update' manually and check for errors"
-fi
-display_success "Basic utilities installed successfully"
-
-# Step 3: Install Python and pip
-display_step 3 "Installing Python and pip"
-apt-get install -y python3 python3-pip python3-venv
-if [ $? -ne 0 ]; then
-    handle_error "Failed to install Python" "Try installing Python manually: 'apt-get install python3'"
-fi
-display_success "Python and pip installed successfully"
-
-# Step 4: Install Node.js and npm
-display_step 4 "Installing Node.js and npm"
-if ! command_exists node; then
-    display_info "Node.js not found, installing..."
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-    apt-get install -y nodejs
-    if [ $? -ne 0 ]; then
-        handle_error "Failed to install Node.js" "Try installing Node.js manually from https://nodejs.org/"
+# New function to check system requirements
+check_system_requirements() {
+    # Check Ubuntu version
+    if ! grep -q "Ubuntu" /etc/os-release; then
+        display_error "This script is designed for Ubuntu Server"
+        exit 1
     fi
-else
-    display_info "Node.js is already installed"
-fi
-display_success "Node.js and npm installed successfully"
-
-# Step 5: Install Docker
-display_step 5 "Installing Docker"
-if ! command_exists docker; then
-    display_info "Docker not found, installing..."
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sh get-docker.sh
-    if [ $? -ne 0 ]; then
-        handle_error "Failed to install Docker" "Try installing Docker manually: https://docs.docker.com/engine/install/"
+    
+    # Check minimum system requirements
+    local total_mem=$(free -m | awk '/^Mem:/{print $2}')
+    local cpu_cores=$(nproc)
+    local disk_space=$(df -BG / | awk 'NR==2 {print $4}' | sed 's/G//')
+    
+    if [ $total_mem -lt 2048 ]; then
+        display_warning "Minimum 2GB RAM recommended (found ${total_mem}MB)"
     fi
-    rm get-docker.sh
-else
-    display_info "Docker is already installed"
-fi
-display_success "Docker installed successfully"
+    
+    if [ $cpu_cores -lt 2 ]; then
+        display_warning "Minimum 2 CPU cores recommended (found $cpu_cores)"
+    fi
+    
+    if [ $disk_space -lt 20 ]; then
+        display_warning "Minimum 20GB disk space recommended (found ${disk_space}GB)"
+    fi
+}
 
-# Step 6: Install Docker Compose
-display_step 6 "Installing Docker Compose"
-if ! command_exists docker-compose; then
-    display_info "Docker Compose not found, installing..."
-    curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+# Function to install Python with pyenv
+install_python() {
+    display_info "Installing Python $PYTHON_VERSION with pyenv..."
+    
+    # Install pyenv dependencies
+    apt-get install -y make build-essential libssl-dev zlib1g-dev \
+        libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
+        libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev \
+        libffi-dev liblzma-dev
+    
+    # Install pyenv
+    curl https://pyenv.run | bash
+    
+    # Add pyenv to PATH
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+    echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+    echo 'eval "$(pyenv init -)"' >> ~/.bashrc
+    
+    # Install Python
+    export PATH="$HOME/.pyenv/bin:$PATH"
+    eval "$(pyenv init -)"
+    pyenv install $PYTHON_VERSION
+    pyenv global $PYTHON_VERSION
+}
+
+# Function to install Node.js with nvm
+install_nodejs() {
+    display_info "Installing Node.js $NODE_VERSION with nvm..."
+    
+    # Install nvm
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+    
+    # Add nvm to PATH
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    
+    # Install Node.js
+    nvm install $NODE_VERSION
+    nvm use $NODE_VERSION
+    nvm alias default $NODE_VERSION
+}
+
+# Function to setup virtual environment
+setup_venv() {
+    display_info "Setting up Python virtual environment..."
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install --upgrade pip setuptools wheel
+}
+
+# Function to install and configure Docker
+install_docker() {
+    display_info "Installing Docker..."
+    
+    # Remove old versions
+    apt-get remove -y docker docker-engine docker.io containerd runc || true
+    
+    # Install prerequisites
+    apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+    
+    # Add Docker's official GPG key
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    
+    # Add Docker repository
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+    
+    # Install Docker
+    apt-get update
+    apt-get install -y docker-ce docker-ce-cli containerd.io
+    
+    # Install Docker Compose
+    curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
-    if [ $? -ne 0 ]; then
-        handle_error "Failed to install Docker Compose" "Try installing Docker Compose manually: https://docs.docker.com/compose/install/"
+    
+    # Add user to docker group
+    usermod -aG docker $SUDO_USER
+    
+    # Start and enable Docker service
+    systemctl start docker
+    systemctl enable docker
+}
+
+# Function to setup SSL certificates
+setup_ssl() {
+    display_info "Setting up SSL certificates..."
+    
+    if ! command_exists certbot; then
+        apt-get install -y certbot
     fi
-else
-    display_info "Docker Compose is already installed"
-fi
-display_success "Docker Compose installed successfully"
-
-# Step 7: Create necessary directories
-display_step 7 "Creating necessary directories"
-mkdir -p backups
-chmod 755 backups
-display_success "Directories created successfully"
-
-# Step 8: Configure environment
-display_step 8 "Configuring environment"
-if [ ! -f .env ]; then
-    display_info "Creating .env file from .env.example..."
-    cp .env.example .env
     
-    # Generate secure values for .env
-    display_info "Generating secure passwords and keys..."
-    SECRET_KEY=$(generate_random)
-    POSTGRES_PASSWORD=$(generate_random)
-    REDIS_PASSWORD=$(generate_random)
-    BACKUP_ENCRYPTION_KEY=$(generate_random)
-    GRAFANA_PASSWORD=$(generate_random)
-    
-    # Update .env with secure values
-    sed -i "s/your-secret-key-here/$SECRET_KEY/g" .env
-    
-    # Add database configuration
-    echo "# Database Configuration" >> .env
-    echo "POSTGRES_USER=v2ray_user" >> .env
-    echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> .env
-    echo "POSTGRES_DB=v2ray_db" >> .env
-    echo "DATABASE_URL=postgresql://v2ray_user:$POSTGRES_PASSWORD@db:5432/v2ray_db" >> .env
-    
-    # Add Redis password
-    sed -i "s/REDIS_PASSWORD=$/REDIS_PASSWORD=$REDIS_PASSWORD/g" .env
-    
-    # Add backup encryption key
-    sed -i "s/BACKUP_ENCRYPTION_KEY=\"\"/BACKUP_ENCRYPTION_KEY=\"$BACKUP_ENCRYPTION_KEY\"/g" .env
-    
-    # Add Grafana password
-    echo "# Grafana Configuration" >> .env
-    echo "GRAFANA_ADMIN_PASSWORD=$GRAFANA_PASSWORD" >> .env
-else
-    display_info ".env file already exists, skipping configuration"
-fi
-display_success "Environment configured successfully"
-
-# Step 9: Install frontend dependencies
-display_step 9 "Installing frontend dependencies"
-if [ -d "frontend" ]; then
-    cd frontend
-    npm install
-    if [ $? -ne 0 ]; then
-        cd ..
-        handle_error "Failed to install frontend dependencies" "Try running 'cd frontend && npm install' manually"
-    else
-        cd ..
-        display_success "Frontend dependencies installed successfully"
+    # Generate self-signed certificate for development
+    if [ ! -d "certificates" ]; then
+        mkdir -p certificates
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout certificates/privkey.pem \
+            -out certificates/fullchain.pem \
+            -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
     fi
-else
-    handle_error "Frontend directory not found" "Make sure you're in the correct directory"
-fi
+}
 
-# Step 10: Run system tests
-display_step 10 "Running system tests"
-python3 test_system.py
-if [ $? -ne 0 ]; then
-    handle_error "System tests failed" "Check the error messages above and fix any issues"
-else
-    display_success "System tests passed successfully"
-fi
-
-# Step 11: Build Docker images (most important)
-display_step 11 "Building Docker images"
-display_info "This may take a few minutes..."
-docker-compose build
-if [ $? -ne 0 ]; then
-    handle_error "Failed to build Docker images" "Check Docker installation and try again"
-else
-    display_success "Docker images built successfully"
-fi
-
-# Step 12: Start services
-display_step 12 "Starting services"
-docker-compose up -d
-if [ $? -ne 0 ]; then
-    handle_error "Failed to start services" "Check Docker logs: 'docker-compose logs'"
-else
-    display_success "Services started successfully"
+# Function to setup firewall
+setup_firewall() {
+    display_info "Configuring firewall..."
     
-    # Wait for services to be ready
-    display_info "Waiting for services to be ready..."
-    progress_bar 10
-    
-    # Run database migrations
-    display_info "Running database migrations..."
-    docker-compose exec -T api alembic upgrade head
-    if [ $? -ne 0 ]; then
-        handle_error "Failed to run database migrations" "Try running migrations manually: 'docker-compose exec api alembic upgrade head'"
-    else
-        display_success "Database migrations completed successfully"
+    if ! command_exists ufw; then
+        apt-get install -y ufw
     fi
-fi
+    
+    # Configure UFW
+    ufw default deny incoming
+    ufw default allow outgoing
+    ufw allow ssh
+    ufw allow http
+    ufw allow https
+    ufw allow 8388/tcp  # V2Ray default port
+    ufw allow 8388/udp  # V2Ray default port
+    
+    # Enable firewall
+    echo "y" | ufw enable
+}
 
-# Display M-R-J typography
-display_mrj
+# Main installation process
+main() {
+    clear
+    display_header "Welcome to V2Ray Management System Installer"
+    
+    # Check root and system requirements
+    check_root
+    check_system_requirements
+    
+    # Update system
+    display_step 1 "Updating system packages"
+    apt-get update && apt-get upgrade -y
+    
+    # Install basic utilities
+    display_step 2 "Installing basic utilities"
+    apt-get install -y build-essential git curl wget unzip
+    
+    # Install Python
+    display_step 3 "Installing Python"
+    install_python
+    
+    # Setup virtual environment
+    display_step 4 "Setting up virtual environment"
+    setup_venv
+    
+    # Install Node.js
+    display_step 5 "Installing Node.js"
+    install_nodejs
+    
+    # Install Docker
+    display_step 6 "Installing Docker"
+    install_docker
+    
+    # Setup SSL
+    display_step 7 "Setting up SSL"
+    setup_ssl
+    
+    # Setup firewall
+    display_step 8 "Configuring firewall"
+    setup_firewall
+    
+    # Install project dependencies
+    display_step 9 "Installing project dependencies"
+    pip install -r requirements.txt
+    cd frontend && npm install && cd ..
+    
+    # Generate environment variables
+    display_step 10 "Configuring environment"
+    if [ ! -f .env ]; then
+        cp .env.example .env
+        # Update environment variables
+        sed -i "s/your-secret-key-here/$(generate_random)/g" .env
+        sed -i "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$(generate_random)/g" .env
+        sed -i "s/REDIS_PASSWORD=.*/REDIS_PASSWORD=$(generate_random)/g" .env
+    fi
+    
+    # Build frontend
+    display_step 11 "Building frontend"
+    cd frontend && npm run build && cd ..
+    
+    # Start services
+    display_step 12 "Starting services"
+    docker-compose up -d
+    
+    # Display success message
+    display_mrj
+    
+    # Display access information
+    echo -e "${GREEN}V2Ray Management System has been installed successfully!${NC}"
+    echo -e "${YELLOW}Access the dashboard at: https://$(curl -s ifconfig.me)${NC}"
+    echo -e "${YELLOW}Default admin credentials: admin / admin${NC}"
+    echo -e "${RED}IMPORTANT: Please change the default admin password after first login!${NC}"
+}
 
-# Display important information
-echo -e "${BOLD}${WHITE}Important Information:${NC}"
-echo -e "${YELLOW}1. Frontend URL: ${WHITE}http://localhost:3000${NC}"
-echo -e "${YELLOW}2. API URL: ${WHITE}http://localhost:8000${NC}"
-echo -e "${YELLOW}3. API Documentation: ${WHITE}http://localhost:8000/api/docs${NC}"
-echo -e "${YELLOW}4. Grafana URL: ${WHITE}http://localhost:3000${NC} (admin:$GRAFANA_PASSWORD)"
-echo -e "${YELLOW}5. Flower (Celery Monitor): ${WHITE}http://localhost:5555${NC}"
-echo -e "\n${BOLD}${WHITE}Next Steps:${NC}"
-echo -e "${YELLOW}1. Configure your Telegram bot:${NC}"
-echo -e "   - Update TELEGRAM_BOT_TOKEN in .env"
-echo -e "   - Update TELEGRAM_CHAT_ID in .env"
-echo -e "${YELLOW}2. Update ALLOWED_ORIGINS in .env with your domain${NC}"
-echo -e "${YELLOW}3. Configure SSL/TLS for production use${NC}"
-echo -e "\n${BOLD}${RED}IMPORTANT: Save these credentials in a secure location:${NC}"
-echo -e "${YELLOW}PostgreSQL Password: ${WHITE}$POSTGRES_PASSWORD${NC}"
-echo -e "${YELLOW}Redis Password: ${WHITE}$REDIS_PASSWORD${NC}"
-echo -e "${YELLOW}Grafana Admin Password: ${WHITE}$GRAFANA_PASSWORD${NC}"
-echo -e "\n${BOLD}${YELLOW}For security reasons, please change these passwords after initial setup.${NC}"
-echo -e "\n${BOLD}${GREEN}Installation completed successfully!${NC}"
+# Run main installation
+main "$@"
